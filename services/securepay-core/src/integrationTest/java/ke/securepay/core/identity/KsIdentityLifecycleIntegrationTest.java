@@ -146,16 +146,39 @@ class KsIdentityLifecycleIntegrationTest {
     }
 
     @Test
-    void optimisticLockConflictFailsSafely() {
+    void optimisticLockConflictFailsSafely() throws Exception {
         String suffix = UUID.randomUUID().toString();
         var actor = ActorContextFactory.test("securepay-core");
         var issued = issuanceService.issue(new IssueKsIdentityCommand(
                 "life-lock-" + suffix, IdentityType.TEST, "Lock", actor));
+        lifecycleService.transition(new LifecycleTransitionCommand(
+                issued.identityId(), IdentityStatus.ACTIVE, "activate", actor));
 
-        jdbcTemplate.update("UPDATE identity.ks_identities SET version = version + 1 WHERE id = ?", issued.identityId());
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        AtomicInteger successes = new AtomicInteger();
+        AtomicInteger conflicts = new AtomicInteger();
 
-        assertThatThrownBy(() -> lifecycleService.transition(new LifecycleTransitionCommand(
-                        issued.identityId(), IdentityStatus.ACTIVE, "activate", actor)))
-                .isInstanceOf(OptimisticLockException.class);
+        Runnable suspend = () -> {
+            try {
+                start.await(30, TimeUnit.SECONDS);
+                lifecycleService.transition(new LifecycleTransitionCommand(
+                        issued.identityId(), IdentityStatus.SUSPENDED, "suspend", actor));
+                successes.incrementAndGet();
+            } catch (OptimisticLockException ex) {
+                conflicts.incrementAndGet();
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        };
+
+        pool.submit(suspend);
+        pool.submit(suspend);
+        start.countDown();
+        pool.shutdown();
+        assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(successes.get()).isEqualTo(1);
+        assertThat(conflicts.get()).isEqualTo(1);
     }
 }

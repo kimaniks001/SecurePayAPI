@@ -7,15 +7,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.ValidationMessage;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import ke.securepay.core.support.SecurePayIntegrationTest;
 import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
 import ke.securepay.platform.identity.events.IdentityEventTypes;
@@ -193,7 +189,10 @@ class KsIdentityIssuanceIntegrationTest {
         jdbcTemplate.update(
                 """
                 UPDATE idempotency.idempotency_records
-                SET expires_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 hour'
+                SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '2 hours',
+                    updated_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '2 hours',
+                    expires_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 hour',
+                    locked_until = (NOW() AT TIME ZONE 'UTC') - INTERVAL '30 minutes'
                 WHERE operation_code = ? AND idempotency_key = ?
                 """,
                 IdempotencyService.IDENTITY_ISSUE_OPERATION,

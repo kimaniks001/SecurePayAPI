@@ -4,6 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import ke.securepay.core.support.SecurePayIntegrationTest;
 import ke.securepay.platform.identity.alias.AliasNormalizer;
 import ke.securepay.platform.identity.command.AliasLifecycleTransitionCommand;
@@ -45,9 +50,13 @@ class KsAliasIntegrationTest {
         DockerAssumptions.enforceDockerPolicyForIntegrationTests();
     }
 
+    private static String shortSuffix() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    }
+
     @Test
     void aliasCreationAndLookupWorkWithoutConsumingSequence() {
-        String suffix = UUID.randomUUID().toString();
+        String suffix = shortSuffix();
         var actor = ActorContextFactory.test("securepay-core");
         var issued = issuanceService.issue(new IssueKsIdentityCommand(
                 "alias-base-" + suffix, IdentityType.TEST, "Alias Base", actor));
@@ -56,7 +65,7 @@ class KsAliasIntegrationTest {
                 "SELECT last_value FROM identity.ks_number_sequence", Long.class);
 
         var alias = aliasService.createAlias(new CreateAliasCommand(
-                issued.identityId(), "my.alias." + suffix, AliasType.MEMORABLE, true, actor));
+                issued.identityId(), "alias." + suffix, AliasType.MEMORABLE, true, actor));
 
         Long sequenceAfter = jdbcTemplate.queryForObject(
                 "SELECT last_value FROM identity.ks_number_sequence", Long.class);
@@ -70,11 +79,11 @@ class KsAliasIntegrationTest {
 
     @Test
     void duplicateNormalizedAliasIsRejected() {
-        String suffix = UUID.randomUUID().toString();
+        String suffix = shortSuffix();
         var actor = ActorContextFactory.test("securepay-core");
         var issued = issuanceService.issue(new IssueKsIdentityCommand(
                 "alias-dup-" + suffix, IdentityType.TEST, "Dup", actor));
-        String aliasValue = "dup.alias." + suffix;
+        String aliasValue = "dup." + suffix;
 
         aliasService.createAlias(new CreateAliasCommand(
                 issued.identityId(), aliasValue, AliasType.MEMORABLE, false, actor));
@@ -95,7 +104,7 @@ class KsAliasIntegrationTest {
 
     @Test
     void retiredAliasRemainsReservedAndCreatesAuditOutbox() {
-        String suffix = UUID.randomUUID().toString();
+        String suffix = shortSuffix();
         var actor = ActorContextFactory.test("securepay-core");
         var issued = issuanceService.issue(new IssueKsIdentityCommand(
                 "alias-retire-" + suffix, IdentityType.TEST, "Retire", actor));
@@ -119,19 +128,41 @@ class KsAliasIntegrationTest {
     }
 
     @Test
-    void aliasLifecycleOptimisticLockConflictFails() {
-        String suffix = UUID.randomUUID().toString();
+    void aliasLifecycleOptimisticLockConflictFails() throws Exception {
+        String suffix = shortSuffix();
         var actor = ActorContextFactory.test("securepay-core");
         var issued = issuanceService.issue(new IssueKsIdentityCommand(
                 "alias-lock-" + suffix, IdentityType.TEST, "Lock", actor));
         var alias = aliasService.createAlias(new CreateAliasCommand(
                 issued.identityId(), "lock." + suffix, AliasType.MEMORABLE, false, actor));
+        aliasService.transitionAlias(new AliasLifecycleTransitionCommand(
+                alias.id(), AliasStatus.ACTIVE, "activate", actor));
 
-        jdbcTemplate.update(
-                "UPDATE identity.ks_number_aliases SET version = version + 1 WHERE id = ?", alias.id());
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        AtomicInteger successes = new AtomicInteger();
+        AtomicInteger conflicts = new AtomicInteger();
 
-        assertThatThrownBy(() -> aliasService.transitionAlias(new AliasLifecycleTransitionCommand(
-                        alias.id(), AliasStatus.ACTIVE, "activate", actor)))
-                .isInstanceOf(OptimisticLockException.class);
+        Runnable suspend = () -> {
+            try {
+                start.await(30, TimeUnit.SECONDS);
+                aliasService.transitionAlias(new AliasLifecycleTransitionCommand(
+                        alias.id(), AliasStatus.SUSPENDED, "suspend", actor));
+                successes.incrementAndGet();
+            } catch (OptimisticLockException ex) {
+                conflicts.incrementAndGet();
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        };
+
+        pool.submit(suspend);
+        pool.submit(suspend);
+        start.countDown();
+        pool.shutdown();
+        assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(successes.get()).isEqualTo(1);
+        assertThat(conflicts.get()).isEqualTo(1);
     }
 }
