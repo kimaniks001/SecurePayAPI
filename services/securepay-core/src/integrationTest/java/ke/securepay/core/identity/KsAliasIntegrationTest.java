@@ -135,19 +135,17 @@ class KsAliasIntegrationTest {
                 "alias-lock-" + suffix, IdentityType.TEST, "Lock", actor));
         var alias = aliasService.createAlias(new CreateAliasCommand(
                 issued.identityId(), "lock." + suffix, AliasType.MEMORABLE, false, actor));
-        aliasService.transitionAlias(new AliasLifecycleTransitionCommand(
-                alias.id(), AliasStatus.ACTIVE, "activate", actor));
 
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService pool = Executors.newFixedThreadPool(2);
         AtomicInteger successes = new AtomicInteger();
         AtomicInteger conflicts = new AtomicInteger();
 
-        Runnable suspend = () -> {
+        Runnable activate = () -> {
             try {
                 start.await(30, TimeUnit.SECONDS);
                 aliasService.transitionAlias(new AliasLifecycleTransitionCommand(
-                        alias.id(), AliasStatus.SUSPENDED, "suspend", actor));
+                        alias.id(), AliasStatus.ACTIVE, "activate", actor));
                 successes.incrementAndGet();
             } catch (OptimisticLockException ex) {
                 conflicts.incrementAndGet();
@@ -156,8 +154,8 @@ class KsAliasIntegrationTest {
             }
         };
 
-        pool.submit(suspend);
-        pool.submit(suspend);
+        pool.submit(activate);
+        pool.submit(activate);
         start.countDown();
         pool.shutdown();
         assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
