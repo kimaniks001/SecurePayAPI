@@ -1,0 +1,59 @@
+# SecurePay API — Local development dependencies (Phase 1)
+#
+# Provides PostgreSQL and Redis-compatible cache for local engineering only.
+# No production credentials. No real bank credentials. No hardcoded secrets.
+#
+# Start:  docker compose --env-file .env.example up -d
+# Stop:   docker compose --env-file .env.example down
+# Logs:   docker compose --env-file .env.example logs -f
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: securepay-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - securepay_postgres_data:/var/lib/postgresql/data
+    networks:
+      - securepay_local
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: securepay-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - securepay_redis_data:/data
+    networks:
+      - securepay_local
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    command: ["redis-server", "--appendonly", "yes"]
+
+networks:
+  securepay_local:
+    name: securepay_local
+    driver: bridge
+
+volumes:
+  securepay_postgres_data:
+    name: securepay_postgres_data
+  securepay_redis_data:
+    name: securepay_redis_data

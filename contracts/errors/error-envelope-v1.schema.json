@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://securepay.example/contracts/errors/error-envelope-v1.schema.json",
+  "title": "SecurePay API Error Envelope v1",
+  "description": "Standard error response envelope for SecurePay public APIs. Must not expose stack traces, SQL errors, secrets, provider credentials, internal topology, or sensitive account details.",
+  "type": "object",
+  "required": ["success", "error", "meta"],
+  "additionalProperties": false,
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "const": false
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Stable machine-readable error code.",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "message": {
+          "type": "string",
+          "description": "User-safe message suitable for clients and partners.",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "details": {
+          "description": "Optional structured details. Must remain user-safe.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["field", "issue"],
+                "properties": {
+                  "field": { "type": "string" },
+                  "issue": { "type": "string" },
+                  "code": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["request_id", "api_version", "timestamp"],
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        },
+        "api_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+pip-wheel-metadata/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Logs and local data
+*.log
+logs/
+tmp/
+temp/
+
+# Docker local volumes (if mounted locally)
+.docker-data/
+
+# Secrets and credentials (defence in depth)
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
