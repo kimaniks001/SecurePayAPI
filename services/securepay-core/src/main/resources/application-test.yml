@@ -1,0 +1,8 @@
+spring:
+  main:
+    lazy-initialization: true
+
+logging:
+  level:
+    root: warn
+    ke.securepay: info
