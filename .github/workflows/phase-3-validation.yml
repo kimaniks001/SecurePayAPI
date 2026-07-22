@@ -170,6 +170,7 @@ jobs:
   phase-3-complete:
     name: Phase 3 validation complete
     runs-on: ubuntu-latest
+    if: always()
     needs:
       - foundation-validation
       - unit-tests
@@ -179,5 +180,23 @@ jobs:
       - compose-config
       - compose-runtime
     steps:
-      - name: Confirm all mandatory Phase 3 checks passed
-        run: echo "All mandatory Phase 3 validation jobs passed."
+      - name: Verify all mandatory Phase 3 jobs succeeded
+        env:
+          FOUNDATION_VALIDATION: ${{ needs.foundation-validation.result }}
+          UNIT_TESTS: ${{ needs.unit-tests.result }}
+          INTEGRATION_TESTS: ${{ needs.integration-tests.result }}
+          DOCTRINE_TESTS: ${{ needs.doctrine-tests.result }}
+          SECRET_SCAN: ${{ needs.secret-scan.result }}
+          COMPOSE_CONFIG: ${{ needs.compose-config.result }}
+          COMPOSE_RUNTIME: ${{ needs.compose-runtime.result }}
+        run: |
+          set -euo pipefail
+          for job in FOUNDATION_VALIDATION UNIT_TESTS INTEGRATION_TESTS DOCTRINE_TESTS SECRET_SCAN COMPOSE_CONFIG COMPOSE_RUNTIME; do
+            result="${!job}"
+            echo "${job}=${result}"
+            if [ "${result}" != "success" ]; then
+              echo "Mandatory job failed or was skipped: ${job}=${result}"
+              exit 1
+            fi
+          done
+          echo "All mandatory Phase 3 validation jobs passed."

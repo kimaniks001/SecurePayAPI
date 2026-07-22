@@ -63,11 +63,7 @@ public class IdempotencyRepository {
                           AND operation_code = :operationCode
                           AND idempotency_key = :idempotencyKey
                         """,
-                        Map.of(
-                                "applicationId", applicationId,
-                                "actorId", actorId,
-                                "operationCode", operationCode,
-                                "idempotencyKey", idempotencyKey),
+                        scopeParams(applicationId, actorId, operationCode, idempotencyKey),
                         (rs, rowNum) -> mapRow(rs))
                 .stream()
                 .findFirst();
@@ -121,7 +117,10 @@ public class IdempotencyRepository {
                     version = version + 1
                 WHERE id = :id AND version = :expectedVersion
                 """,
-                Map.of("id", id, "expectedVersion", expectedVersion, "failureCode", failureCode));
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("expectedVersion", expectedVersion)
+                        .addValue("failureCode", failureCode));
         if (updated == 0) {
             throw new OptimisticLockException("Idempotency record version conflict");
         }
@@ -143,6 +142,15 @@ public class IdempotencyRepository {
         if (updated == 0) {
             throw new OptimisticLockException("Idempotency record version conflict");
         }
+    }
+
+    static MapSqlParameterSource scopeParams(
+            String applicationId, String actorId, String operationCode, String idempotencyKey) {
+        return new MapSqlParameterSource()
+                .addValue("applicationId", applicationId)
+                .addValue("actorId", actorId)
+                .addValue("operationCode", operationCode)
+                .addValue("idempotencyKey", idempotencyKey);
     }
 
     private MapSqlParameterSource baseParams(IdempotencyRecord record) {

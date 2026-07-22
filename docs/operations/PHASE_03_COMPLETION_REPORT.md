@@ -156,6 +156,39 @@ Doctrine, secret scan, and Compose config now report independently even when int
 | Test methods | 32 |
 | Prior CI executed count (24) | Lower because Spring context failed before most test methods ran; `OutboxIntegrationTest` failed in `@BeforeAll` (1 error, 5 methods not reached) |
 
+## Post-merge remediation (branch `phase-03-remediation-persistence-tests`)
+
+Phase 3 was merged to `main` via PR #3 before the final CI run was fully green. Workflow [29915217629](https://github.com/kimaniks001/SecurePayAPI/actions/runs/29915217629) reported **9 integration-test failures** after the bean/schema corrections.
+
+### Failed workflow identifiers
+
+| Workflow | Run |
+| --- | --- |
+| Phase 3 Validation | [29915217629](https://github.com/kimaniks001/SecurePayAPI/actions/runs/29915217629) |
+| Phase 2 Validation | [29915217645](https://github.com/kimaniks001/SecurePayAPI/actions/runs/29915217645) |
+
+### Exact defects found
+
+| # | Defect | Root cause |
+| --- | --- | --- |
+| 1 | `IntegrationTestInfrastructureTest` container assertion | Counted all `GenericContainer` beans instead of verifying named `postgresContainer` / `redisContainer` beans and image types |
+| 2 | Idempotency `NullPointerException` (6 tests) | `IdempotencyRepository.findByScope` used `Map.of(...)`, which rejects null `applicationId` from `ActorContextFactory.test()` |
+| 3 | Idempotency optimistic-lock test NPE | Same null-safe parameter defect prevented `acquireTechnicalInProgress` from completing |
+| 4 | Outbox technical transaction `PSQLException` (2 tests) | `audit.audit_events` insert omitted explicit `created_at`; DB default `NOW()` could be earlier than Java `occurred_at`, violating `audit_events_occurred_before_created` |
+| 5 | Stored envelope validation not reached | Downstream of the audit insert failure in `recordTechnicalCreation` |
+| 6 | `phase-3-complete` gate skipped | Job used `needs:` without `if: always()`, so GitHub skipped the gate when `integration-tests` failed |
+
+### Corrections made
+
+- `IdempotencyRepository.scopeParams(...)` uses `MapSqlParameterSource` for nullable scope fields; unit test `IdempotencyRepositoryScopeParamsTest` added.
+- `AuditEventRepository` now persists explicit `created_at` matching the record timestamp to satisfy `occurred_at <= created_at`.
+- `IntegrationTestInfrastructureTest` verifies named beans, container types, and Redis/PostgreSQL image tags.
+- `OutboxIntegrationTest` validates JSONB payload read back from PostgreSQL; rollback proven via thrown exception inside a single transaction; unique suffixes per test run.
+- `IdempotencyIntegrationTest` uses UUID-suffixed keys for isolation.
+- `phase-3-complete` runs with `if: always()` and fails clearly when any mandatory job did not succeed.
+
+No doctrine rule, Docker policy, database constraint, or security control was weakened.
+
 ## Validation results (local agent environment)
 
 | Check | Result |
