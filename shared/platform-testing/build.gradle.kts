@@ -17,4 +17,5 @@ dependencies {
     api(libs.testcontainers.redis)
     api(libs.junit.jupiter)
     api(libs.assertj.core)
+    implementation(libs.json.schema.validator)
 }

@@ -2,7 +2,7 @@ package ke.securepay.core.health;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ke.securepay.core.support.IntegrationTestContainersConfig;
+import ke.securepay.core.support.SecurePayIntegrationTest;
 import ke.securepay.platform.common.ids.IdentifierRules;
 import ke.securepay.platform.testing.support.DockerAssumptions;
 import org.junit.jupiter.api.BeforeAll;
@@ -10,17 +10,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
-@Import(IntegrationTestContainersConfig.class)
+@SecurePayIntegrationTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class HealthEndpointIntegrationTest {
 
     @Autowired

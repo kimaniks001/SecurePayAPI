@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
-@SpringBootApplication(scanBasePackages = "ke.securepay.core")
+@SpringBootApplication(scanBasePackages = {"ke.securepay.core", "ke.securepay.platform.persistence"})
 @ConfigurationPropertiesScan(basePackages = "ke.securepay.core.config")
 public class SecurepayCoreApplication {
 

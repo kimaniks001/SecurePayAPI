@@ -37,6 +37,11 @@ The Control Centre must eventually surface:
 | Database health | Data layer status |
 | Cache health | Redis-compatible cache status |
 | Queue health | Async pipeline status |
+| Audit write health | Audit append success/failure rate |
+| Idempotency conflict rate | Duplicate or mismatched idempotency keys |
+| Outbox backlog | Count of `PENDING` / `PROCESSING` outbox events |
+| Outbox oldest pending age | Age of oldest unpublished outbox event |
+| Outbox dead-letter count | Events requiring operator review |
 | Choice Bank health | Provider connectivity |
 | Payment-rail health | M-PESA, PesaLink, RTGS/EFT, etc. |
 | Settlement failures | Financial operations |

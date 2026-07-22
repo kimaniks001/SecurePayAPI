@@ -118,16 +118,32 @@ docker compose --env-file .env.example down
 ## Validation
 
 ```bash
-pip install -r scripts/requirements-validation.txt
+./gradlew test
+./gradlew integrationTest
+./gradlew doctrineTest
 bash scripts/run_all_validations.sh
 ```
 
-GitHub Actions workflow `.github/workflows/phase-1-validation.yml` runs the same checks on pull requests and pushes to `main`.
+GitHub Actions workflows run validation on pull requests and pushes to `main` (Phase 1–3).
 
 ## Phased build strategy
 
-- **Phase 1 (current):** Repository, doctrine, architecture, contracts, validation — **no production business services**
-- **Phase 2+:** Implement services per ADRs and domain doctrine, with doctrine tests
+- **Phase 1:** Repository, doctrine, architecture, contracts, validation
+- **Phase 2:** Executable platform skeleton (health endpoints, Flyway, Redis, CI)
+- **Phase 3 (current):** Database, audit, idempotency, transactional outbox foundations — **no business domains**
+- **Phase 4+:** Domain implementation per ADRs
+
+### Phase 3 permanent rules
+
+| Rule | Requirement |
+| --- | --- |
+| PostgreSQL authority | PostgreSQL is the structured system of record; Redis is not authoritative for idempotency |
+| Audit immutability | Audit events are append-only; no repository update/delete operations |
+| Outbox | Domain events must be persisted in the transactional outbox before external publication |
+| Actor context | Do not trust client-supplied actor identity; Phase 3 allows SYSTEM and TEST actors only |
+| Schema ownership | Services must not access another domain's owned tables directly |
+| Persistence | Flyway owns schema; no Hibernate auto-DDL |
+| Public endpoints | Health endpoints remain the only public HTTP surface |
 
 Do not implement out-of-phase features unless explicitly instructed.
 

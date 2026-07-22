@@ -19,7 +19,9 @@ dependencies {
     testImplementation(project(":services:webhook-service"))
     testImplementation(project(":applications:control-centre"))
     testImplementation(project(":shared:platform-web"))
+    testImplementation(project(":shared:platform-persistence"))
 
+    testImplementation(libs.assertj.core)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.archunit.junit5)
     testImplementation(libs.spring.web)
@@ -27,4 +29,5 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    workingDir = rootProject.projectDir
 }
