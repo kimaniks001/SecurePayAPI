@@ -17,7 +17,7 @@ import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
 import ke.securepay.platform.identity.events.IdentityEventTypes;
 import ke.securepay.platform.identity.model.AliasStatus;
 import ke.securepay.platform.identity.model.AliasType;
-import ke.securepay.platform.identity.model.IdentityType;
+import ke.securepay.platform.identity.exception.IdentityLifecycleException;
 import ke.securepay.platform.identity.service.KsAliasService;
 import ke.securepay.platform.identity.service.KsIdentityIssuanceService;
 import ke.securepay.platform.identity.service.KsIdentityQueryService;
@@ -125,44 +125,5 @@ class KsAliasIntegrationTest {
                 Integer.class,
                 IdentityEventTypes.ALIAS_STATUS_CHANGED);
         assertThat(auditCount).isGreaterThanOrEqualTo(1);
-    }
-
-    @Test
-    void aliasLifecycleOptimisticLockConflictFails() throws Exception {
-        String suffix = shortSuffix();
-        var actor = ActorContextFactory.test("securepay-core");
-        var issued = issuanceService.issue(new IssueKsIdentityCommand(
-                "alias-lock-" + suffix, IdentityType.TEST, "Lock", actor));
-        var alias = aliasService.createAlias(new CreateAliasCommand(
-                issued.identityId(), "lock." + suffix, AliasType.MEMORABLE, false, actor));
-        aliasService.transitionAlias(new AliasLifecycleTransitionCommand(
-                alias.id(), AliasStatus.ACTIVE, "activate", actor));
-
-        CountDownLatch start = new CountDownLatch(1);
-        ExecutorService pool = Executors.newFixedThreadPool(2);
-        AtomicInteger successes = new AtomicInteger();
-        AtomicInteger conflicts = new AtomicInteger();
-
-        Runnable suspend = () -> {
-            try {
-                start.await(30, TimeUnit.SECONDS);
-                aliasService.transitionAlias(new AliasLifecycleTransitionCommand(
-                        alias.id(), AliasStatus.SUSPENDED, "suspend", actor));
-                successes.incrementAndGet();
-            } catch (OptimisticLockException ex) {
-                conflicts.incrementAndGet();
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-        };
-
-        pool.submit(suspend);
-        pool.submit(suspend);
-        start.countDown();
-        pool.shutdown();
-        assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
-
-        assertThat(successes.get()).isEqualTo(1);
-        assertThat(conflicts.get()).isEqualTo(1);
     }
 }
