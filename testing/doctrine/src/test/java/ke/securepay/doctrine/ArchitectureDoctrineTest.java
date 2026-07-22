@@ -82,14 +82,17 @@ class ArchitectureDoctrineTest {
     }
 
     @Test
-    void onlyHealthControllerExposesHttpEndpointsInCore() {
+    void onlyApprovedControllersExposeHttpEndpointsInCore() {
         ArchRule rule = classes()
                 .that()
                 .areAnnotatedWith(RestController.class)
                 .and()
                 .resideInAPackage("ke.securepay.core..")
                 .should()
-                .haveSimpleName("HealthController");
+                .haveSimpleName("HealthController")
+                .orShould()
+                .haveSimpleName("IdentityController");
+
         rule.check(classes);
     }
 
