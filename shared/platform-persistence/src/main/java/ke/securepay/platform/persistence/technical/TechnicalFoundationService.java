@@ -9,6 +9,7 @@ import ke.securepay.platform.persistence.audit.AuditEventRecord;
 import ke.securepay.platform.persistence.audit.AuditWriter;
 import ke.securepay.platform.persistence.outbox.OutboxEventRecord;
 import ke.securepay.platform.persistence.outbox.OutboxService;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +41,10 @@ public class TechnicalFoundationService {
                 INSERT INTO platform.technical_test_records (id, record_key, payload)
                 VALUES (:id, :recordKey, CAST(:payload AS jsonb))
                 """,
-                Map.of("id", id, "recordKey", recordKey, "payload", toJson(payload)));
+                new MapSqlParameterSource()
+                        .addValue("id", id)
+                        .addValue("recordKey", recordKey)
+                        .addValue("payload", toJson(payload)));
 
         AuditEventRecord audit = auditWriter.append(
                 AuditCategory.PLATFORM_TECHNICAL,

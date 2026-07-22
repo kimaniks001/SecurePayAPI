@@ -43,8 +43,9 @@ class IdempotencyIntegrationTest {
 
     @Test
     void firstAcquisitionCreatesInProgressThenCompletes() {
+        String suffix = UUID.randomUUID().toString();
         ActorContext actor = ActorContextFactory.test("securepay-core");
-        String key = "idem_key_in_progress_001";
+        String key = "idem_key_in_progress_" + suffix;
         String body = "{\"action\":\"technical-test\"}";
 
         var inProgress = idempotencyService.acquireTechnicalInProgress(actor, key, body, "application/json");
@@ -57,8 +58,9 @@ class IdempotencyIntegrationTest {
 
     @Test
     void sameKeyAndHashReplaysSafelyWithoutReExecuting() {
+        String suffix = UUID.randomUUID().toString();
         ActorContext actor = ActorContextFactory.test("securepay-core");
-        String key = "idem_key_first_001";
+        String key = "idem_key_first_" + suffix;
         String body = "{\"action\":\"technical-test\"}";
 
         var first = idempotencyService.executeTechnical(
@@ -73,8 +75,9 @@ class IdempotencyIntegrationTest {
 
     @Test
     void sameKeyWithDifferentRequestHashIsRejected() {
+        String suffix = UUID.randomUUID().toString();
         ActorContext actor = ActorContextFactory.test("securepay-core");
-        String key = "idem_key_conflict_001";
+        String key = "idem_key_conflict_" + suffix;
         idempotencyService.executeTechnical(actor, key, "{\"a\":1}", "application/json", () -> Map.of("ok", true));
 
         assertThatThrownBy(() -> idempotencyService.executeTechnical(
@@ -84,8 +87,9 @@ class IdempotencyIntegrationTest {
 
     @Test
     void concurrentDuplicateAttemptsDoNotExecuteTwice() throws Exception {
+        String suffix = UUID.randomUUID().toString();
         ActorContext actor = ActorContextFactory.test("securepay-core");
-        String key = "idem_key_concurrent_001";
+        String key = "idem_key_concurrent_" + suffix;
         String body = "{\"action\":\"concurrent\"}";
         AtomicInteger executions = new AtomicInteger();
         CountDownLatch start = new CountDownLatch(1);
@@ -114,9 +118,10 @@ class IdempotencyIntegrationTest {
 
     @Test
     void optimisticLockConflictFailsWithoutAutomaticRetry() {
+        String suffix = UUID.randomUUID().toString();
         ActorContext actor = ActorContextFactory.test("securepay-core");
         var inProgress = idempotencyService.acquireTechnicalInProgress(
-                actor, "idem_key_optimistic_001", "{\"x\":1}", "application/json");
+                actor, "idem_key_optimistic_" + suffix, "{\"x\":1}", "application/json");
 
         assertThatThrownBy(() -> idempotencyService.completeTechnical(inProgress.id(), inProgress.version() + 99, Map.of("ok", true)))
                 .isInstanceOf(OptimisticLockException.class);
@@ -124,12 +129,20 @@ class IdempotencyIntegrationTest {
 
     @Test
     void expiredRecordIsRejected() {
+        String suffix = UUID.randomUUID().toString();
         ActorContext actor = ActorContextFactory.test("securepay-core");
-        String key = "idem_key_expired_001";
+        String key = "idem_key_expired_" + suffix;
         var inProgress = idempotencyService.acquireTechnicalInProgress(actor, key, "{\"x\":1}", "application/json");
 
         jdbcTemplate.update(
-                "UPDATE idempotency.idempotency_records SET expires_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 hour' WHERE id = ?",
+                """
+                UPDATE idempotency.idempotency_records
+                SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '2 hours',
+                    updated_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '2 hours',
+                    expires_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 hour',
+                    locked_until = (NOW() AT TIME ZONE 'UTC') - INTERVAL '30 minutes'
+                WHERE id = ?
+                """,
                 inProgress.id());
 
         assertThatThrownBy(() -> idempotencyService.executeTechnical(
@@ -140,8 +153,9 @@ class IdempotencyIntegrationTest {
 
     @Test
     void staleInProgressLockRequiresRetry() {
+        String suffix = UUID.randomUUID().toString();
         ActorContext actor = ActorContextFactory.test("securepay-core");
-        String key = "idem_key_stale_001";
+        String key = "idem_key_stale_" + suffix;
         var inProgress = idempotencyService.acquireTechnicalInProgress(actor, key, "{\"x\":1}", "application/json");
 
         jdbcTemplate.update(

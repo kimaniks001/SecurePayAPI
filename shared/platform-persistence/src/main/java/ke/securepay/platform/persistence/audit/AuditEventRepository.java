@@ -21,13 +21,13 @@ public class AuditEventRepository {
             INSERT INTO audit.audit_events (
                 id, event_id, category, event_type, actor_type, actor_id, actor_ks_number,
                 application_id, resource_type, resource_id, action, previous_state, new_state,
-                reason, request_id, correlation_id, source_service, occurred_at, metadata,
+                reason, request_id, correlation_id, source_service, occurred_at, created_at, metadata,
                 integrity_version, integrity_hash
             ) VALUES (
                 :id, :eventId, :category, :eventType, :actorType, :actorId, :actorKsNumber,
                 :applicationId, :resourceType, :resourceId, :action,
                 CAST(:previousState AS jsonb), CAST(:newState AS jsonb),
-                :reason, :requestId, :correlationId, :sourceService, :occurredAt,
+                :reason, :requestId, :correlationId, :sourceService, :occurredAt, :createdAt,
                 CAST(:metadata AS jsonb), :integrityVersion, :integrityHash
             )
             """;
@@ -60,6 +60,7 @@ public class AuditEventRepository {
                 .addValue("correlationId", record.correlationId())
                 .addValue("sourceService", record.sourceService())
                 .addValue("occurredAt", Timestamp.from(record.occurredAt()))
+                .addValue("createdAt", Timestamp.from(record.createdAt()))
                 .addValue("metadata", toJson(record.metadata()))
                 .addValue("integrityVersion", record.integrityVersion())
                 .addValue("integrityHash", record.integrityHash());
