@@ -13,6 +13,7 @@ venv/
 pip-wheel-metadata/
 
 # Build artifacts
+.gradle/
 dist/
 build/
 *.egg-info/

@@ -151,7 +151,7 @@ paths:
                             items:
                               $ref: '#/components/schemas/DependencyHealth'
         '503':
-          description: One or more critical dependencies are unhealthy
+          description: One or more critical dependencies are unavailable
           content:
             application/json:
               schema:
@@ -327,7 +327,7 @@ components:
           example: postgres
         status:
           type: string
-          enum: [healthy, degraded, unhealthy, unknown]
+          enum: [healthy, degraded, unavailable]
         latency_ms:
           type: number
           minimum: 0

@@ -1,11 +1,10 @@
-# SecurePay API — Local development dependencies (Phase 1)
+# SecurePay API — Local development (Phase 2)
 #
-# Provides PostgreSQL and Redis-compatible cache for local engineering only.
-# No production credentials. No real bank credentials. No hardcoded secrets.
+# Start infrastructure and application:
+#   docker compose --env-file .env.example up --build
 #
-# Start:  docker compose --env-file .env.example up -d
-# Stop:   docker compose --env-file .env.example down
-# Logs:   docker compose --env-file .env.example logs -f
+# Stop:
+#   docker compose --env-file .env.example down
 
 services:
   postgres:
@@ -46,6 +45,42 @@ services:
       retries: 5
       start_period: 5s
     command: ["redis-server", "--appendonly", "yes"]
+
+  securepay-core:
+    build:
+      context: .
+      dockerfile: services/securepay-core/Dockerfile
+    container_name: securepay-core
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      ENVIRONMENT: local
+      APP_PORT: 8080
+      MANAGEMENT_PORT: 8081
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+      - "${MANAGEMENT_PORT:-8081}:8081"
+    networks:
+      - securepay_local
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health/live >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
 
 networks:
   securepay_local:

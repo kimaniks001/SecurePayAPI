@@ -1,8 +1,8 @@
 # SecurePay Master Architecture
 
-**Status:** Current architectural decision (Phase 1 foundation)  
+**Status:** Current architectural decision (Phase 2 executable skeleton)
 **Last updated:** 2026-07-22  
-**Branch:** `phase-01-foundation`
+**Branch:** `phase-02-executable-platform-skeleton`
 
 ## Classification legend
 
@@ -26,15 +26,15 @@ SecurePay is an API-first, domain-first agreement and financial platform serving
 
 ## Deployable components
 
-| Component | Purpose | Phase 1 status |
+| Component | Purpose | Phase status |
 | --- | --- | --- |
-| `securepay-core` | Identity, agreements, governance, Payment Ready evaluation, administration APIs | Scaffold only |
-| `financial-ledger` | Authoritative double-entry ledger | Scaffold only |
-| `choice-bank-connector` | Sole integration boundary to Choice Bank BaaS | Scaffold only |
-| `evidence-service` | Evidence storage and processing | Scaffold only |
-| `notification-service` | OTP, email, SMS orchestration | Scaffold only |
-| `webhook-service` | Partner webhook delivery | Scaffold only |
-| `securepay-control-centre` | Operational administration UI | Scaffold only |
+| `securepay-core` | Identity, agreements, governance, Payment Ready evaluation, administration APIs | **Executable** — health endpoints only |
+| `financial-ledger` | Authoritative double-entry ledger | Compiling skeleton |
+| `choice-bank-connector` | Sole integration boundary to Choice Bank BaaS | Compiling skeleton |
+| `evidence-service` | Evidence storage and processing | Compiling skeleton |
+| `notification-service` | OTP, email, SMS orchestration | Compiling skeleton |
+| `webhook-service` | Partner webhook delivery | Compiling skeleton |
+| `securepay-control-centre` | Operational administration UI | Non-executable placeholder |
 
 **Current architectural decision:** Use modular architecture with selected isolated services. Do not create unnecessary microservices.
 
@@ -103,7 +103,17 @@ flowchart LR
 - Event envelope: [`contracts/events/event-envelope-v1.schema.json`](../../contracts/events/event-envelope-v1.schema.json)
 - Error envelope: [`contracts/errors/error-envelope-v1.schema.json`](../../contracts/errors/error-envelope-v1.schema.json)
 
-Phase 1 exposes health endpoints only. Domain endpoints are added in later phases behind versioned contracts.
+## Health dependency status vocabulary
+
+Public JSON dependency status values are:
+
+| Internal enum | Public JSON |
+| --- | --- |
+| `HEALTHY` | `healthy` |
+| `DEGRADED` | `degraded` |
+| `UNAVAILABLE` | `unavailable` |
+
+The deprecated label `unhealthy` must not appear in public responses or OpenAPI.
 
 ## Cross-cutting controls
 
@@ -115,9 +125,21 @@ Phase 1 exposes health endpoints only. Domain endpoints are added in later phase
 | Payment Ready | Calculated by backend domain logic only — never assigned by clients or admins |
 | Provider outages | Must not corrupt SecurePay state |
 
-## Phase 1 exclusions
+## Implementation stack (Phase 2)
 
-**Confirmed:** Phase 1 does not implement production business services, KS Number tables, authentication, SecureLink state machine, Payment Ready engine, ledger tables, or Choice API calls.
+| Layer | Technology |
+| --- | --- |
+| Language | Java 21 |
+| Framework | Spring Boot 3.4.4 |
+| Build | Gradle 8.12.1 (Kotlin DSL) |
+| Migrations | Flyway |
+| Cache | Spring Data Redis |
+
+See [ADR-0006](../decisions/ADR-0006-JAVA-SPRING-BOOT-GRADLE.md).
+
+## Phase 2 exclusions
+
+**Confirmed:** Phase 2 does not implement KS issuance, authentication, SecureLinks, Payment Ready, ledger postings, Choice API calls, or Control Centre UI. Only health endpoints are exposed.
 
 ## Related documents
 

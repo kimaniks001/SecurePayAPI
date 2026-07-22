@@ -1,7 +1,7 @@
 # Unresolved Items Register
 
 **Status:** Living register  
-**Phase:** 1 — foundation
+**Phase:** 1–2 foundation (living register)
 
 ## Purpose
 
@@ -21,6 +21,11 @@ Track ambiguity, competing interpretations, and matters requiring external confi
 | UR-08 | OTP policy for outbound transfers | Default OTP vs exempted flows | Choice technical | 3+ |
 | UR-09 | Evidence retention period | Legal vs operational minimums | Legal + compliance | 3+ |
 | UR-10 | Agreement Review authority model | Internal vs external reviewers | Product + legal | 3+ |
+| UR-11 | Spring Security for health-only Phase 2 | Permit health without fake auth vs add minimal filter | Platform engineering | 2 |
+
+## Phase 2 note
+
+Executable `securepay-core` health endpoints are intentionally public in local development. Production exposure rules remain a future infrastructure input (see Application–Infrastructure Contract).
 
 ## Choice-specific open questions
 
@@ -36,4 +41,4 @@ Full Choice contract open questions: [CHOICE_CONTRACT_OPEN_QUESTIONS.md](../bank
 ## Related documents
 
 - [Operating Doctrine](../doctrine/SECUREPAY_OPERATING_DOCTRINE.md)
-- [Phase 01 Completion Report](PHASE_01_COMPLETION_REPORT.md)
+- [Phase 02 Completion Report](PHASE_02_COMPLETION_REPORT.md)
