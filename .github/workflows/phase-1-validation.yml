@@ -1,0 +1,70 @@
+name: Phase 1 Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    name: Phase 1 foundation validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/requirements-validation.txt
+
+      - name: Install validation dependencies
+        run: pip install -r scripts/requirements-validation.txt
+
+      - name: Validate required files
+        run: python3 scripts/validate_required_files.py
+
+      - name: Validate Markdown internal links
+        run: python3 scripts/validate_markdown_links.py
+
+      - name: Validate doctrine consistency
+        run: python3 scripts/validate_doctrine.py
+
+      - name: Scan for accidental secrets
+        run: python3 scripts/scan_secrets.py
+
+      - name: Validate OpenAPI 3.1 specification
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          from openapi_spec_validator import validate
+          from openapi_spec_validator.readers import read_from_filename
+
+          spec_path = Path("contracts/openapi/securepay-api-v1.yaml")
+          spec = read_from_filename(str(spec_path))[0]
+          validate(spec)
+          print(f"OpenAPI validation passed: {spec_path}")
+          PY
+
+      - name: Validate JSON Schema syntax
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import jsonschema
+
+          for rel in [
+              "contracts/events/event-envelope-v1.schema.json",
+              "contracts/errors/error-envelope-v1.schema.json",
+          ]:
+              path = Path(rel)
+              schema = json.loads(path.read_text(encoding="utf-8"))
+              jsonschema.Draft202012Validator.check_schema(schema)
+              print(f"JSON Schema validation passed: {rel}")
+          PY
+
+      - name: Validate Docker Compose configuration
+        run: docker compose --env-file .env.example config --quiet

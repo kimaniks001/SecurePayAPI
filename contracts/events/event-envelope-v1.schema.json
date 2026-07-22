@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://securepay.example/contracts/events/event-envelope-v1.schema.json",
+  "title": "SecurePay Domain Event Envelope v1",
+  "description": "Standard envelope for SecurePay domain events published to internal buses and partner webhook pipelines.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "correlation_id",
+    "source",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Globally unique identifier for this event instance.",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Namespaced event type, e.g. securelink.payment_ready.evaluated.",
+      "minLength": 3,
+      "maxLength": 256
+    },
+    "event_version": {
+      "type": "string",
+      "description": "Semantic version of the event payload schema.",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the domain fact occurred."
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlates related commands, events, and API requests.",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "causation_id": {
+      "type": "string",
+      "description": "Identifier of the command or event that directly caused this event.",
+      "minLength": 8,
+      "maxLength": 128
+    },
+    "source": {
+      "type": "string",
+      "description": "Publishing service name, e.g. securepay-core.",
+      "minLength": 2,
+      "maxLength": 128
+    },
+    "actor": {
+      "type": "object",
+      "description": "Optional actor that initiated the underlying action.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["user", "partner_application", "administrator", "system", "service"]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "ks_number": {
+          "type": "string",
+          "description": "Canonical KS Number when the actor is a known identity.",
+          "pattern": "^KS[0-9]{3,}$"
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "description": "Primary resource affected by the event.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 128
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "version": {
+          "type": "string",
+          "description": "Resource version when applicable."
+        }
+      },
+      "required": ["type", "id"]
+    },
+    "data": {
+      "type": "object",
+      "description": "Event-specific payload. Schema defined per event_type."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Non-domain transport metadata (redacted, non-sensitive).",
+      "additionalProperties": true
+    }
+  }
+}
