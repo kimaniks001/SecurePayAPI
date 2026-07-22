@@ -21,6 +21,9 @@ dependencies {
     testImplementation(project(":shared:platform-web"))
     testImplementation(project(":shared:platform-persistence"))
 
+    testImplementation(project(":shared:platform-persistence"))
+    testImplementation(project(":shared:platform-identity"))
+
     testImplementation(libs.assertj.core)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.archunit.junit5)

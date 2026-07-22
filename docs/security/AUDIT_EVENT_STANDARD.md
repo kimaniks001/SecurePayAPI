@@ -1,9 +1,9 @@
 # Audit Event Standard
 
-**Status:** Current architectural decision (Phase 3 implementation)  
-**Phase:** 3 — database, audit, idempotency foundation  
-**Branch:** `phase-03-database-audit-idempotency-foundation`  
-**Module:** `shared/platform-persistence`
+**Status:** Current architectural decision (Phase 4 implementation)
+**Phase:** 4 — KS Number identity issuance
+**Branch:** `phase-04-ksnumber-identity-issuance`
+**Module:** `shared/platform-persistence`, `shared/platform-identity`
 
 ## Purpose
 
@@ -35,20 +35,25 @@ AuditEventWriter.append(
 
 Transactional participation: see [Transaction Boundary Standard](../architecture/TRANSACTION_BOUNDARY_STANDARD.md).
 
-## Phase 3 categories and event types
+## Phase 3–4 categories and event types
 
-| Category | Value | Event type (Phase 3) |
+| Category | Value | Event types |
 | --- | --- | --- |
 | Platform technical | `platform.technical` | `platform.technical.test.created` |
+| Identity | `identity` | `identity.ks-number.issued`, `identity.status.changed`, `identity.alias.created`, `identity.alias.status.changed` |
 
-Business categories (identity, financial, governance, security) are **not** emitted in Phase 3.
+Constants: `IdentityEventTypes` in `shared/platform-identity`.
 
-## Actor requirements (Phase 3)
+Business categories (financial, governance, security beyond identity) are **not** emitted in Phase 4.
 
-Audit events record `actor_type` and `actor_id` from `ActorContext`. Phase 3 allows only:
+## Actor requirements (Phase 3–4)
+
+Audit events record `actor_type` and `actor_id` from `ActorContext`. Phase 3–4 allows only:
 
 - `system` / `system`
 - `service` / `test-actor` (TEST actor)
+
+Identity issuance and lifecycle events record the invoking actor from the command.
 
 See [Actor Context Standard](ACTOR_CONTEXT_STANDARD.md).
 
@@ -59,7 +64,7 @@ See [Actor Context Standard](ACTOR_CONTEXT_STANDARD.md).
 | `event_id` | Unique business identifier (Phase 3: generated via `IdentifierRules.newRequestId()`) |
 | `category` | High-level grouping |
 | `event_type` | Specific action classification |
-| `resource_type` | Entity type (Phase 3: `technical_test`) |
+| `resource_type` | Entity type (e.g. `technical_test`, `identity`, `identity_alias`) |
 | `resource_id` | Entity identifier (Phase 3: record key) |
 | `action` | Verb (Phase 3: `create`) |
 | `request_id` | HTTP or command request ID |

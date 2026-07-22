@@ -125,14 +125,55 @@ class ArchitectureDoctrineTest {
     }
 
     @Test
-    void noKsNumberDomainClassesExist() {
+    void ksNumberFormatterDoesNotDependOnWebOrPersistence() {
         ArchRule rule = noClasses()
                 .that()
-                .resideInAnyPackage("ke.securepay..")
+                .resideInAPackage("ke.securepay.platform.identity.ksnumber..")
                 .should()
-                .haveSimpleNameContaining("KsNumber")
-                .orShould()
-                .haveSimpleNameContaining("KSNumber");
+                .dependOnClassesThat()
+                .resideInAnyPackage("org.springframework.web..", "org.springframework.jdbc..");
+        rule.check(classes);
+    }
+
+    @Test
+    void identityDomainDoesNotDependOnFinancialLedger() {
+        ArchRule rule = noClasses()
+                .that()
+                .resideInAPackage("ke.securepay.platform.identity..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("ke.securepay.ledger..");
+        rule.check(classes);
+    }
+
+    @Test
+    void identityRepositoriesHaveNoDeleteMethods() {
+        ArchRule rule = noMethods()
+                .that()
+                .areDeclaredInClassesThat()
+                .resideInAPackage("ke.securepay.platform.identity.persistence..")
+                .should()
+                .haveNameMatching("delete.*|remove.*");
+        rule.check(classes);
+    }
+
+    @Test
+    void identityIssuanceServiceExistsInIdentityDomain() {
+        ArchRule rule = classes()
+                .that()
+                .haveSimpleName("KsIdentityIssuanceService")
+                .should()
+                .resideInAPackage("ke.securepay.platform.identity.service..");
+        rule.check(classes);
+    }
+
+    @Test
+    void identityEventsUseStableExternalNames() {
+        ArchRule rule = classes()
+                .that()
+                .haveSimpleName("IdentityEventTypes")
+                .should()
+                .resideInAPackage("ke.securepay.platform.identity.events..");
         rule.check(classes);
     }
 

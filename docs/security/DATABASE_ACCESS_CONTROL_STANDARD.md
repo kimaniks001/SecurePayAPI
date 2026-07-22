@@ -1,8 +1,8 @@
 # Database Access Control Standard
 
-**Status:** Current architectural decision (Phase 3 design; roles not yet provisioned in local Docker)  
-**Phase:** 3 — database, audit, idempotency foundation  
-**Branch:** `phase-03-database-audit-idempotency-foundation`
+**Status:** Current architectural decision (Phase 4 design; roles not yet provisioned in local Docker)
+**Phase:** 4 — KS Number identity issuance
+**Branch:** `phase-04-ksnumber-identity-issuance`
 
 ## Purpose
 
@@ -24,6 +24,19 @@ Phase 3 documents the target role model. Production and staging role creation is
 ## Privilege matrix (target)
 
 Legend: `C` = CREATE (schema objects), `R` = SELECT, `I` = INSERT, `U` = UPDATE, `D` = DELETE, `—` = no access
+
+### Schema: `identity`
+
+| Role | `ks_identities` | `ks_number_aliases` | `ks_number_sequence` |
+| --- | --- | --- | --- |
+| `migration_owner` | CRUD + DDL | CRUD + DDL | USAGE, SELECT |
+| `securepay_core_runtime` | R, I, U | R, I, U | USAGE, SELECT (`nextval`) |
+| `audit_writer` | — | — | — |
+| `audit_reader` | — | — | — |
+| `outbox_worker` | — | — | — |
+| `reporting_reader` | R | R | R (sequence metadata only) |
+
+**Explicit:** `securepay_core_runtime` requires `USAGE` on schema `identity` and `SELECT` + `nextval` on `identity.ks_number_sequence`.
 
 ### Schema: `platform`
 
@@ -108,6 +121,7 @@ Legend: `C` = CREATE (schema objects), `R` = SELECT, `I` = INSERT, `U` = UPDATE,
 - Read replicas and BI tools
 - SELECT on explicitly granted schemas/tables
 - Default Phase 3 grant: `platform.*`, `audit.audit_events`, `events.outbox_events` (read-only)
+- Phase 4 addition: `identity.ks_identities`, `identity.ks_number_aliases` (read-only) when approved for compliance reports
 - Excludes `idempotency` unless fraud/ops ADR approves
 
 ## Connection and secrets

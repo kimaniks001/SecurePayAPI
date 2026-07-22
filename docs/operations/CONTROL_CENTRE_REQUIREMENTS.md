@@ -89,9 +89,9 @@ Authorized operators must be able to (via audited APIs):
 
 **Locked doctrine:** None of the above may bypass Payment Ready rules, ledger immutability, or direct fund release outside backend authorization.
 
-## Phase 1 scope
+## Phase 1–4 scope
 
-**Confirmed:** No Control Centre UI or administration APIs are implemented in Phase 1. Requirements are documented for Phase 2+.
+**Confirmed:** No Control Centre UI or administration APIs are implemented. Phase 4 adds **no public identity HTTP endpoints** — KS identity is service-layer only. Requirements are documented for Phase 2+.
 
 ## Related documents
 

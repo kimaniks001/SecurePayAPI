@@ -13,7 +13,7 @@ Define the contract between SecurePay application services and infrastructure te
 
 | Field | Value |
 | --- | --- |
-| **Purpose** | Platform skeleton; future home of agreement, identity, and governance APIs |
+| **Purpose** | Platform skeleton; home of KS identity domain (Phase 4); future agreement and governance APIs |
 | **Container image** | `services/securepay-core/Dockerfile` (multi-stage, Java 21, non-root) |
 | **Ports** | `8080` (public API), `8081` (internal management) |
 | **Public exposure** | Health endpoints only in Phase 2 — future APIs via gateway |
@@ -48,7 +48,7 @@ Define the contract between SecurePay application services and infrastructure te
 
 | Store | Required | Ownership |
 | --- | --- | --- |
-| PostgreSQL | yes | `securepay-core` — schemas `platform`, `audit`, `events`, `idempotency` (Phase 3 technical foundations) |
+| PostgreSQL | yes | `securepay-core` — schemas `platform`, `audit`, `events`, `idempotency` (Phase 3); `identity` (Phase 4) |
 | Redis-compatible cache | yes | Ephemeral operational data only — **not authoritative for idempotency** |
 | Object storage | no | Not used in Phase 3 |
 | Message queue | no | Outbox persisted in PostgreSQL; external broker deferred |
@@ -69,7 +69,9 @@ Define the contract between SecurePay application services and infrastructure te
 | Audit events | Restricted | PostgreSQL `audit` schema (append-only) |
 | Idempotency records | Internal | PostgreSQL `idempotency` schema |
 | Outbox events | Internal | PostgreSQL `events` schema |
-| PII | Confidential | Not stored in Phase 3 |
+| KS identities | Internal | PostgreSQL `identity.ks_identities` |
+| KS aliases | Internal | PostgreSQL `identity.ks_number_aliases` |
+| PII | Confidential | `display_name` optional on identity — classification pending (UR-24) |
 | Financial records | Restricted | Not stored in Phase 3 |
 
 #### Scaling and traffic
@@ -95,12 +97,19 @@ Define the contract between SecurePay application services and infrastructure te
 | Field | Value |
 | --- | --- |
 | Logs | Structured JSON to stdout |
-| Metrics | Micrometer-compatible (Actuator internal) |
+| Metrics | Micrometer-compatible (Actuator internal); Phase 4 identity counters `securepay.identity.*` |
 | Traces | OpenTelemetry (future) |
 
 #### Storage policy
 
 **No permanent local file storage.** Evidence and exports use object storage in future phases.
+
+#### Shared modules (classpath)
+
+| Module | Phase | Responsibility |
+| --- | --- | --- |
+| `shared/platform-persistence` | 3 | Audit, idempotency, outbox, actor context |
+| `shared/platform-identity` | 4 | KS Number issuance, aliases, lifecycle, identity outbox writer |
 
 ---
 
