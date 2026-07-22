@@ -28,6 +28,7 @@ configurations {
 }
 
 dependencies {
+    implementation(project(":shared:platform-persistence"))
     implementation(project(":shared:platform-common"))
     implementation(project(":shared:platform-observability"))
     implementation(project(":shared:platform-web"))
@@ -53,6 +54,7 @@ dependencies {
     add("integrationTestImplementation", libs.testcontainers.junit.jupiter)
     add("integrationTestImplementation", libs.testcontainers.postgresql)
     add("integrationTestImplementation", libs.testcontainers.redis)
+    add("integrationTestImplementation", libs.json.schema.validator)
 }
 
 springBoot {

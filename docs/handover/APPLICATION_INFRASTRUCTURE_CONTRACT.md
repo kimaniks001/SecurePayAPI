@@ -48,10 +48,10 @@ Define the contract between SecurePay application services and infrastructure te
 
 | Store | Required | Ownership |
 | --- | --- | --- |
-| PostgreSQL | yes | `securepay-core` — `platform_metadata` (Phase 2) |
-| Redis-compatible cache | yes | Ephemeral operational data only |
-| Object storage | no | Not used in Phase 2 |
-| Message queue | no | Not used in Phase 2 |
+| PostgreSQL | yes | `securepay-core` — schemas `platform`, `audit`, `events`, `idempotency` (Phase 3 technical foundations) |
+| Redis-compatible cache | yes | Ephemeral operational data only — **not authoritative for idempotency** |
+| Object storage | no | Not used in Phase 3 |
+| Message queue | no | Outbox persisted in PostgreSQL; external broker deferred |
 
 #### External dependencies
 
@@ -65,9 +65,12 @@ Define the contract between SecurePay application services and infrastructure te
 
 | Data type | Classification | Storage |
 | --- | --- | --- |
-| Platform metadata | Internal | PostgreSQL |
-| PII | Confidential | Not stored in Phase 2 |
-| Financial records | Restricted | Not stored in Phase 2 |
+| Platform metadata | Internal | PostgreSQL `platform` schema |
+| Audit events | Restricted | PostgreSQL `audit` schema (append-only) |
+| Idempotency records | Internal | PostgreSQL `idempotency` schema |
+| Outbox events | Internal | PostgreSQL `events` schema |
+| PII | Confidential | Not stored in Phase 3 |
+| Financial records | Restricted | Not stored in Phase 3 |
 
 #### Scaling and traffic
 

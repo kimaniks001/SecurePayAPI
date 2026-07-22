@@ -1,6 +1,6 @@
 # SecurePay Master Architecture
 
-**Status:** Current architectural decision (Phase 2 executable skeleton)
+**Status:** Current architectural decision (Phase 3 persistence foundations)
 **Last updated:** 2026-07-22  
 **Branch:** `phase-02-executable-platform-skeleton`
 
@@ -125,19 +125,35 @@ The deprecated label `unhealthy` must not appear in public responses or OpenAPI.
 | Payment Ready | Calculated by backend domain logic only — never assigned by clients or admins |
 | Provider outages | Must not corrupt SecurePay state |
 
-## Implementation stack (Phase 2)
+## Implementation stack (Phase 2–3)
 
 | Layer | Technology |
 | --- | --- |
 | Language | Java 21 |
 | Framework | Spring Boot 3.4.4 |
 | Build | Gradle 8.12.1 (Kotlin DSL) |
-| Migrations | Flyway |
-| Cache | Spring Data Redis |
+| Persistence | Spring Data JDBC |
+| Migrations | Flyway (sole schema authority) |
+| Cache | Spring Data Redis (non-authoritative) |
 
 See [ADR-0006](../decisions/ADR-0006-JAVA-SPRING-BOOT-GRADLE.md).
 
-## Phase 2 exclusions
+## Phase 3 persistence foundations
+
+| Schema | Purpose |
+| --- | --- |
+| `platform` | Platform metadata and technical test scaffolding |
+| `audit` | Append-only immutable audit events |
+| `events` | Transactional outbox |
+| `idempotency` | Persistent idempotency records |
+
+Module: `shared/platform-persistence`. Standards: [Database schema ownership](DATABASE_SCHEMA_OWNERSHIP_STANDARD.md), [Idempotency](IDEMPOTENCY_STANDARD.md), [Transactional outbox](TRANSACTIONAL_OUTBOX_STANDARD.md).
+
+## Phase 3 exclusions
+
+**Confirmed:** Phase 3 does not implement KS issuance, authentication, SecureLinks, Payment Ready, ledger postings, Choice API calls, or Control Centre UI. Only health endpoints are exposed publicly.
+
+## Phase 2 exclusions (historical)
 
 **Confirmed:** Phase 2 does not implement KS issuance, authentication, SecureLinks, Payment Ready, ledger postings, Choice API calls, or Control Centre UI. Only health endpoints are exposed.
 
@@ -155,4 +171,9 @@ See [ADR-0006](../decisions/ADR-0006-JAVA-SPRING-BOOT-GRADLE.md).
 - [ADR-0002 Modular platform boundaries](../decisions/ADR-0002-MODULAR-PLATFORM-BOUNDARIES.md)
 - [ADR-0003 PostgreSQL system of record](../decisions/ADR-0003-POSTGRESQL-SYSTEM-OF-RECORD.md)
 - [ADR-0004 Choice Bank adapter boundary](../decisions/ADR-0004-CHOICE-BANK-ADAPTER-BOUNDARY.md)
-- [ADR-0005 Control Centre no direct database access](../decisions/ADR-0005-CONTROL-CENTRE-NO-DIRECT-DATABASE-ACCESS.md)
+- [ADR-0006 Java Spring Boot Gradle](../decisions/ADR-0006-JAVA-SPRING-BOOT-GRADLE.md)
+- [ADR-0007 Database schema ownership](../decisions/ADR-0007-DATABASE-SCHEMA-OWNERSHIP.md)
+- [ADR-0008 Transactional outbox](../decisions/ADR-0008-TRANSACTIONAL-OUTBOX.md)
+- [ADR-0009 Idempotency persistence](../decisions/ADR-0009-IDEMPOTENCY-PERSISTENCE.md)
+- [ADR-0010 Immutable audit events](../decisions/ADR-0010-IMMUTABLE-AUDIT-EVENTS.md)
+- [ADR-0011 Optimistic locking standard](../decisions/ADR-0011-OPTIMISTIC-LOCKING-STANDARD.md)

@@ -4,7 +4,7 @@
 
 SecurePay is an API-first, domain-first agreement and financial platform built by Keyman Oak. It enables versioned agreements (SecureLinks), deterministic Payment Ready evaluation, authoritative ledger accounting, and regulated settlement — accessed by SecurePay clients, Keyman business solutions, institutional partners, and approved external developers.
 
-## Implementation stack (Phase 2+)
+## Implementation stack (Phase 2–3)
 
 | Component | Technology |
 | --- | --- |
@@ -12,10 +12,24 @@ SecurePay is an API-first, domain-first agreement and financial platform built b
 | Framework | Spring Boot 3.4.x |
 | Build | Gradle (Kotlin DSL) + version catalog |
 | Database | PostgreSQL 16 + Flyway |
+| Persistence | Spring Data JDBC (Flyway-owned schema) |
 | Cache | Redis-compatible (Spring Data Redis) |
 | Testing | JUnit 5, Testcontainers, ArchUnit |
 
 See [ADR-0006](docs/decisions/ADR-0006-JAVA-SPRING-BOOT-GRADLE.md).
+
+## Phase 3 technical foundations
+
+Phase 3 adds permanent persistence controls in PostgreSQL (not Redis):
+
+- Schema ownership (`platform`, `audit`, `events`, `idempotency`)
+- Immutable audit events
+- Persistent idempotency records
+- Transactional outbox
+- Technical actor context (SYSTEM and TEST only)
+- Optimistic locking on mutable technical records
+
+Module: `shared/platform-persistence`. See [Phase 3 completion report](docs/operations/PHASE_03_COMPLETION_REPORT.md).
 
 ## Why API-first?
 
@@ -25,7 +39,7 @@ The public API is the stable contract. Web apps, mobile apps, partner platforms,
 
 | Service | Phase 2 status |
 | --- | --- |
-| `securepay-core` | **Executable** — health endpoints only |
+| `securepay-core` | **Executable** — health endpoints only; Phase 3 persistence foundations |
 | `financial-ledger` | Compiling skeleton |
 | `choice-bank-connector` | Compiling skeleton |
 | `evidence-service` | Compiling skeleton |
@@ -33,7 +47,7 @@ The public API is the stable contract. Web apps, mobile apps, partner platforms,
 | `webhook-service` | Compiling skeleton |
 | `securepay-control-centre` | Non-executable placeholder |
 
-**Phase 2 does not implement production business domains.**
+**Phase 3 does not implement production business domains.**
 
 ## Repository structure
 
@@ -41,7 +55,7 @@ The public API is the stable contract. Web apps, mobile apps, partner platforms,
 securepayAPI/
 ├── build.gradle.kts          # Root Gradle build
 ├── gradle/libs.versions.toml   # Pinned dependency versions
-├── shared/                     # platform-common, platform-web, etc.
+├── shared/                     # platform-common, platform-web, platform-persistence, etc.
 ├── services/                   # securepay-core (executable) + skeletons
 ├── applications/control-centre/  # Placeholder
 ├── database/migrations/        # Flyway SQL (canonical location)
@@ -83,6 +97,7 @@ See [Local Development Guide](docs/operations/LOCAL_DEVELOPMENT_GUIDE.md).
 
 ```bash
 ./gradlew test
+./gradlew integrationTest
 ./gradlew doctrineTest
 ```
 
@@ -100,6 +115,7 @@ docker compose --env-file .env.example config --quiet
 
 - [Phase 1 validation](.github/workflows/phase-1-validation.yml) — doctrine, OpenAPI, secrets, compose config
 - [Phase 2 validation](.github/workflows/phase-2-validation.yml) — Phase 1 + Gradle build + doctrine tests
+- [Phase 3 validation](.github/workflows/phase-3-validation.yml) — Phase 1 + persistence integration tests + compose runtime
 
 ## Branch and PR expectations
 
@@ -112,8 +128,9 @@ docker compose --env-file .env.example config --quiet
 | Phase | Scope |
 | --- | --- |
 | Phase 1 | Doctrine, contracts, validation foundation |
-| **Phase 2** (current) | Executable platform skeleton — health endpoints only |
-| Phase 3+ | Domain implementation per ADRs |
+| Phase 2 | Executable platform skeleton — health endpoints only |
+| **Phase 3** (current) | Database, audit, idempotency, outbox foundations |
+| Phase 4+ | Domain implementation per ADRs |
 
 ## Secrets policy
 

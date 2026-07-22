@@ -1,7 +1,7 @@
 # Unresolved Items Register
 
 **Status:** Living register  
-**Phase:** 1–2 foundation (living register)
+**Phase:** 1–3 foundation (living register)
 
 ## Purpose
 
@@ -22,8 +22,21 @@ Track ambiguity, competing interpretations, and matters requiring external confi
 | UR-09 | Evidence retention period | Legal vs operational minimums | Legal + compliance | 3+ |
 | UR-10 | Agreement Review authority model | Internal vs external reviewers | Product + legal | 3+ |
 | UR-11 | Spring Security for health-only Phase 2 | Permit health without fake auth vs add minimal filter | Platform engineering | 2 |
+| UR-12 | Legal retention periods | Audit, idempotency, outbox, financial records | Legal + compliance | 3+ |
+| UR-13 | Production database role provisioning | Least-privilege PostgreSQL roles | Platform + DBA | 3+ |
+| UR-14 | Idempotency response encryption | Replayable response storage at rest | Security engineering | 3+ |
+| UR-15 | Outbox broker selection | Kafka, RabbitMQ, SNS/SQS, or other | Platform engineering | 3+ |
+| UR-16 | Outbox polling vs CDC | Delivery mechanism trade-offs | Platform engineering | 3+ |
+| UR-17 | Event ordering guarantees | Per-aggregate vs global ordering | Architecture | 3+ |
+| UR-18 | Audit integrity chaining | Hash chain or external notarization requirements | Security + compliance | 3+ |
+| UR-19 | Partitioning thresholds | When to partition audit/outbox/idempotency tables | Platform + DBA | 3+ |
+| UR-20 | Production archival location | Long-term audit and event storage | Operations + legal | 3+ |
+| UR-21 | Regulator audit export format | Partner/regulator export requirements | Compliance | 3+ |
+| UR-22 | Reporting store design | Read models vs direct reporting queries | Architecture | 4+ |
 
-## Phase 2 note
+## Phase 3 note
+
+Phase 3 establishes technical persistence foundations only. Retention durations, production database roles, broker selection, and encryption of replayable idempotency responses remain unresolved and documented in [DATA_RETENTION_AND_PARTITIONING_STANDARD.md](DATA_RETENTION_AND_PARTITIONING_STANDARD.md) and related ADRs.
 
 Executable `securepay-core` health endpoints are intentionally public in local development. Production exposure rules remain a future infrastructure input (see Application–Infrastructure Contract).
 
