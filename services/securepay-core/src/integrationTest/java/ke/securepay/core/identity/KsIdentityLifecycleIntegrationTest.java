@@ -170,7 +170,7 @@ class KsIdentityLifecycleIntegrationTest {
                 lifecycleService.transition(new LifecycleTransitionCommand(
                         issued.identityId(), IdentityStatus.SUSPENDED, "suspend", actor));
                 successes.incrementAndGet();
-            } catch (OptimisticLockException ex) {
+            } catch (OptimisticLockException | IdentityLifecycleException ex) {
                 conflicts.incrementAndGet();
             } catch (Exception ex) {
                 throw new RuntimeException(ex);
