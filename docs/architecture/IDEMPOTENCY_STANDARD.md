@@ -1,9 +1,9 @@
 # Idempotency Standard
 
-**Status:** Current architectural decision (Phase 3 implementation)  
-**Phase:** 3 — database, audit, idempotency foundation  
-**Branch:** `phase-03-database-audit-idempotency-foundation`  
-**Module:** `shared/platform-persistence`
+**Status:** Current architectural decision (Phase 4 implementation)
+**Phase:** 4 — KS Number identity issuance
+**Branch:** `phase-04-ksnumber-identity-issuance`
+**Module:** `shared/platform-persistence`, `shared/platform-identity`
 
 ## Purpose
 
@@ -27,11 +27,11 @@ A record is uniquely identified by:
 
 Enforced by unique index `uq_idempotency_scope`.
 
-| Dimension | Phase 3 behaviour |
+| Dimension | Phase 3–4 behaviour |
 | --- | --- |
 | `application_id` | `NULL` for `SYSTEM` and `TEST` actors via `ActorContextFactory` |
 | `actor_id` | `system` or `test-actor` |
-| `operation_code` | `platform.technical.test` only |
+| `operation_code` | `platform.technical.test`, `identity.ks-number.issue` |
 | `idempotency_key` | Client-supplied; normalized by `IdempotencyKeyValidator` |
 
 ## Idempotency key rules
@@ -68,6 +68,33 @@ IN_PROGRESS → COMPLETED
 
 Updates use `WHERE id = :id AND version = :expectedVersion`. Conflicts raise `OptimisticLockException`.
 
+## Phase 4 identity issuance
+
+Permanent duplicate protection is enforced by `identity.ks_identities.issuance_request_key` (unique forever) and `issuance_request_hash`. Idempotency records are replay-storage only.
+
+```java
+IdempotencyService.execute(
+    actor,
+    IdempotencyService.IDENTITY_ISSUE_OPERATION,  // "identity.ks-number.issue"
+    "identity",
+    issuanceRequestKey,
+    requestBody,
+    "application/json",
+    IdempotencyService.DEFAULT_LOCK,
+    IdempotencyService.IDENTITY_ISSUE_REPLAY_STORAGE_EXPIRY,  // 90 days — replay storage only
+    issuanceAction)
+```
+
+`DefaultKsIdentityIssuanceService.issue` checks permanent identity ownership **before** idempotency and **before** `nextval`. Request body JSON includes `issuance_request_key`, `identity_type`, `display_name`. Fingerprint stored as `issuance_request_hash`.
+
+| Safeguard | Survives idempotency expiry/deletion? |
+| --- | --- |
+| `identity.ks_identities.issuance_request_key` UNIQUE | **Yes** — permanent |
+| `issuance_request_hash` on identity row | **Yes** — permanent |
+| Idempotency replay record | No — operational replay storage only |
+
+No environment variable may disable identity issuance idempotency or permanent duplicate protection.
+
 ## Phase 3 entry point
 
 ```java
@@ -98,7 +125,11 @@ Callers must ensure response bodies contain no secrets before persistence.
 
 ## Retention
 
-Idempotency record retention period: **pending legal/operational confirmation**.
+Idempotency record retention period: **pending legal/operational confirmation** — no invented legal retention period is encoded in Phase 4.
+
+For identity issuance, **legal retention remains unresolved**. The permanent duplicate-issuance guarantee is `identity.ks_identities.issuance_request_key` uniqueness plus `issuance_request_hash`. Deleting or expiring idempotency replay data cannot authorize another identity for the same key.
+
+`IDENTITY_ISSUE_REPLAY_STORAGE_EXPIRY` (90 days) is a provisional operational replay-storage setting only.
 
 Phase 3 stores records until manual cleanup or future purge job. Index `idx_idempotency_expires_at` supports expiry-based deletion when policy is approved.
 

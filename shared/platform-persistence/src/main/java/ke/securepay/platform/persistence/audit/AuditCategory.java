@@ -1,8 +1,9 @@
 package ke.securepay.platform.persistence.audit;
 
-/** Phase 3 technical audit categories only. */
+/** Platform and domain audit categories. */
 public enum AuditCategory {
-    PLATFORM_TECHNICAL("platform.technical");
+    PLATFORM_TECHNICAL("platform.technical"),
+    IDENTITY("identity");
 
     private final String value;
 

@@ -29,6 +29,7 @@ configurations {
 
 dependencies {
     implementation(project(":shared:platform-persistence"))
+    implementation(project(":shared:platform-identity"))
     implementation(project(":shared:platform-common"))
     implementation(project(":shared:platform-observability"))
     implementation(project(":shared:platform-web"))

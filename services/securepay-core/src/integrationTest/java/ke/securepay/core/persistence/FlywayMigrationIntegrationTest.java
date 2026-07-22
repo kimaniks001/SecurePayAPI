@@ -16,15 +16,17 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SecurePayIntegrationTest
 class FlywayMigrationIntegrationTest {
 
-    private static final Set<String> EXPECTED_SCHEMAS = Set.of("platform", "audit", "events", "idempotency");
+    private static final Set<String> EXPECTED_SCHEMAS = Set.of("platform", "audit", "events", "idempotency", "identity");
     private static final Set<String> EXPECTED_TABLES = Set.of(
             "platform.platform_metadata",
             "platform.technical_test_records",
             "audit.audit_events",
             "events.outbox_events",
-            "idempotency.idempotency_records");
+            "idempotency.idempotency_records",
+            "identity.ks_identities",
+            "identity.ks_number_aliases");
     private static final Set<String> PROHIBITED_TABLE_FRAGMENTS = Set.of(
-            "ks_number", "securelink", "journal", "ledger_account", "payment_intent", "user_account", "otp");
+            "securelink", "journal", "ledger_account", "payment_intent", "user_account", "otp");
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -46,7 +48,7 @@ class FlywayMigrationIntegrationTest {
                 """
                 SELECT schema_name
                 FROM information_schema.schemata
-                WHERE schema_name IN ('platform', 'audit', 'events', 'idempotency')
+                WHERE schema_name IN ('platform', 'audit', 'events', 'idempotency', 'identity')
                 """,
                 String.class);
         assertThat(schemas).containsExactlyInAnyOrderElementsOf(EXPECTED_SCHEMAS);
@@ -55,7 +57,7 @@ class FlywayMigrationIntegrationTest {
                 """
                 SELECT table_schema || '.' || table_name
                 FROM information_schema.tables
-                WHERE table_schema IN ('platform', 'audit', 'events', 'idempotency')
+                WHERE table_schema IN ('platform', 'audit', 'events', 'idempotency', 'identity')
                 """,
                 String.class);
         assertThat(tables).containsAll(EXPECTED_TABLES);
@@ -100,7 +102,28 @@ class FlywayMigrationIntegrationTest {
                 WHERE metadata_key = 'platform_phase'
                 """,
                 String.class);
-        assertThat(platformPhase).isEqualTo("phase-03-database-audit-idempotency-foundation");
+        assertThat(platformPhase).isEqualTo("phase-04-ksnumber-identity-issuance");
+    }
+
+    @Test
+    void identitySequenceStartsAtOneInFreshAllocation() {
+        Long next = jdbcTemplate.queryForObject("SELECT nextval('identity.ks_number_sequence')", Long.class);
+        assertThat(next).isNotNull();
+        assertThat(next).isPositive();
+    }
+
+    @Test
+    void identityConstraintsExist() {
+        Integer canonicalUnique = jdbcTemplate.queryForObject(
+                """
+                SELECT COUNT(*) FROM pg_constraint c
+                JOIN pg_class t ON t.oid = c.conrelid
+                JOIN pg_namespace n ON n.oid = t.relnamespace
+                WHERE n.nspname = 'identity' AND t.relname = 'ks_identities'
+                  AND c.conname = 'ks_identities_canonical_ks_number_unique'
+                """,
+                Integer.class);
+        assertThat(canonicalUnique).isEqualTo(1);
     }
 
     @Test

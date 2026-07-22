@@ -6,6 +6,7 @@ include(
     ":shared:platform-web",
     ":shared:platform-testing",
     ":shared:platform-persistence",
+    ":shared:platform-identity",
     ":services:securepay-core",
     ":services:financial-ledger",
     ":services:choice-bank-connector",

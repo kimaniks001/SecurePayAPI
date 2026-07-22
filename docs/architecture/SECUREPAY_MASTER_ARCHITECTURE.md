@@ -1,8 +1,8 @@
 # SecurePay Master Architecture
 
-**Status:** Current architectural decision (Phase 3 persistence foundations)
-**Last updated:** 2026-07-22  
-**Branch:** `phase-02-executable-platform-skeleton`
+**Status:** Current architectural decision (Phase 4 identity domain)
+**Last updated:** 2026-07-23
+**Branch:** `phase-04-ksnumber-identity-issuance`
 
 ## Classification legend
 
@@ -28,7 +28,7 @@ SecurePay is an API-first, domain-first agreement and financial platform serving
 
 | Component | Purpose | Phase status |
 | --- | --- | --- |
-| `securepay-core` | Identity, agreements, governance, Payment Ready evaluation, administration APIs | **Executable** — health endpoints only |
+| `securepay-core` | Identity, agreements, governance, Payment Ready evaluation, administration APIs | **Executable** — health endpoints; Phase 4 KS identity (service-layer) |
 | `financial-ledger` | Authoritative double-entry ledger | Compiling skeleton |
 | `choice-bank-connector` | Sole integration boundary to Choice Bank BaaS | Compiling skeleton |
 | `evidence-service` | Evidence storage and processing | Compiling skeleton |
@@ -149,6 +149,18 @@ See [ADR-0006](../decisions/ADR-0006-JAVA-SPRING-BOOT-GRADLE.md).
 
 Module: `shared/platform-persistence`. Standards: [Database schema ownership](DATABASE_SCHEMA_OWNERSHIP_STANDARD.md), [Idempotency](IDEMPOTENCY_STANDARD.md), [Transactional outbox](TRANSACTIONAL_OUTBOX_STANDARD.md).
 
+## Phase 4 identity domain
+
+| Schema | Purpose |
+| --- | --- |
+| `identity` | Canonical KS Number issuance, lifecycle, aliases |
+
+Module: `shared/platform-identity`. Sequence `identity.ks_number_sequence` (starts at 1 → `KS001`). Standards: [KS Identity Domain Standard](KS_IDENTITY_DOMAIN_STANDARD.md), [KS Number Issuance Standard](KS_NUMBER_ISSUANCE_STANDARD.md).
+
+## Phase 4 exclusions
+
+**Confirmed:** Phase 4 does not implement authentication, public identity HTTP APIs, SecureLinks, Payment Ready, ledger postings, Choice API calls, or Control Centre identity UI. KS identity is service-layer only.
+
 ## Phase 3 exclusions
 
 **Confirmed:** Phase 3 does not implement KS issuance, authentication, SecureLinks, Payment Ready, ledger postings, Choice API calls, or Control Centre UI. Only health endpoints are exposed publicly.
@@ -177,3 +189,5 @@ Module: `shared/platform-persistence`. Standards: [Database schema ownership](DA
 - [ADR-0009 Idempotency persistence](../decisions/ADR-0009-IDEMPOTENCY-PERSISTENCE.md)
 - [ADR-0010 Immutable audit events](../decisions/ADR-0010-IMMUTABLE-AUDIT-EVENTS.md)
 - [ADR-0011 Optimistic locking standard](../decisions/ADR-0011-OPTIMISTIC-LOCKING-STANDARD.md)
+- [ADR-0012 KS Number identity model](../decisions/ADR-0012-KS-NUMBER-IDENTITY-MODEL.md)
+- [ADR-0013 Sequential KS Number issuance](../decisions/ADR-0013-SEQUENTIAL-KS-NUMBER-ISSUANCE.md)

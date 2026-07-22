@@ -23,9 +23,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class IdempotencyService {
 
     private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
-    private static final String TECHNICAL_OPERATION = "platform.technical.test";
-    private static final Duration DEFAULT_LOCK = Duration.ofMinutes(5);
+    public static final String TECHNICAL_OPERATION = "platform.technical.test";
+    public static final String IDENTITY_ISSUE_OPERATION = "identity.ks-number.issue";
+    public static final Duration DEFAULT_LOCK = Duration.ofMinutes(5);
     private static final Duration DEFAULT_EXPIRY = Duration.ofHours(24);
+    /** Provisional replay-storage TTL for identity issuance idempotency records only. */
+    public static final Duration IDENTITY_ISSUE_REPLAY_STORAGE_EXPIRY = Duration.ofDays(90);
 
     private final IdempotencyRepository repository;
     private final AuditPayloadValidator payloadValidator;
@@ -46,12 +49,92 @@ public class IdempotencyService {
     @Transactional
     public IdempotencyRecord acquireTechnicalInProgress(
             ActorContext actor, String idempotencyKey, String requestBody, String requestContentType) {
+        return acquireInProgress(
+                actor,
+                TECHNICAL_OPERATION,
+                "technical_test",
+                idempotencyKey,
+                requestBody,
+                requestContentType,
+                DEFAULT_LOCK,
+                DEFAULT_EXPIRY);
+    }
+
+    @Transactional
+    public IdempotencyRecord completeTechnical(UUID id, long expectedVersion, Map<String, Object> responseBody) {
+        return complete(id, expectedVersion, responseBody);
+    }
+
+    @Transactional
+    public IdempotencyExecutionResult executeTechnical(
+            ActorContext actor,
+            String idempotencyKey,
+            String requestBody,
+            String requestContentType,
+            Supplier<Map<String, Object>> action) {
+        return execute(
+                actor,
+                TECHNICAL_OPERATION,
+                "technical_test",
+                idempotencyKey,
+                requestBody,
+                requestContentType,
+                DEFAULT_LOCK,
+                DEFAULT_EXPIRY,
+                action);
+    }
+
+    @Transactional
+    public IdempotencyExecutionResult execute(
+            ActorContext actor,
+            String operationCode,
+            String resourceType,
+            String idempotencyKey,
+            String requestBody,
+            String requestContentType,
+            Duration lockDuration,
+            Duration expiryDuration,
+            Supplier<Map<String, Object>> action) {
         String normalizedKey = IdempotencyKeyValidator.normalizeOrThrow(idempotencyKey);
         String requestHash = IdempotencyKeyValidator.hashRequest(requestBody);
         Instant now = clock.instant();
 
         Optional<IdempotencyExecutionResult> replay =
-                resolveExisting(actor, normalizedKey, requestHash, now);
+                resolveExisting(actor, operationCode, normalizedKey, requestHash, now);
+        if (replay.isPresent()) {
+            return replay.get();
+        }
+
+        IdempotencyRecord created = acquireInProgress(
+                actor,
+                operationCode,
+                resourceType,
+                idempotencyKey,
+                requestBody,
+                requestContentType,
+                lockDuration,
+                expiryDuration);
+        Map<String, Object> responseBody = action.get();
+        IdempotencyRecord completed = complete(created.id(), created.version(), responseBody);
+        return IdempotencyExecutionResult.completed(completed, false);
+    }
+
+    @Transactional
+    public IdempotencyRecord acquireInProgress(
+            ActorContext actor,
+            String operationCode,
+            String resourceType,
+            String idempotencyKey,
+            String requestBody,
+            String requestContentType,
+            Duration lockDuration,
+            Duration expiryDuration) {
+        String normalizedKey = IdempotencyKeyValidator.normalizeOrThrow(idempotencyKey);
+        String requestHash = IdempotencyKeyValidator.hashRequest(requestBody);
+        Instant now = clock.instant();
+
+        Optional<IdempotencyExecutionResult> replay =
+                resolveExisting(actor, operationCode, normalizedKey, requestHash, now);
         if (replay.isPresent()) {
             throw new IdempotencyConflictException("Idempotency key already completed; use replay path");
         }
@@ -61,18 +144,18 @@ public class IdempotencyService {
                 actor.applicationId(),
                 actor.actorId(),
                 normalizedKey,
-                TECHNICAL_OPERATION,
+                operationCode,
                 requestHash,
                 requestContentType,
-                "technical_test",
+                resourceType,
                 null,
                 IdempotencyStatus.IN_PROGRESS,
                 null,
                 null,
                 null,
                 null,
-                now.plus(DEFAULT_LOCK),
-                now.plus(DEFAULT_EXPIRY),
+                now.plus(lockDuration),
+                now.plus(expiryDuration),
                 now,
                 null,
                 now,
@@ -83,42 +166,19 @@ public class IdempotencyService {
             meterRegistry.counter(PersistenceMetricNames.IDEMPOTENCY_CREATED).increment();
             return created;
         } catch (DuplicateKeyException ex) {
-            IdempotencyRecord raced = repository
-                    .findByScope(actor.applicationId(), actor.actorId(), TECHNICAL_OPERATION, normalizedKey)
+            repository
+                    .findByScope(actor.applicationId(), actor.actorId(), operationCode, normalizedKey)
                     .orElseThrow(() -> ex);
-            resolveExisting(actor, normalizedKey, requestHash, now);
+            resolveExisting(actor, operationCode, normalizedKey, requestHash, now);
             throw ex;
         }
     }
 
     @Transactional
-    public IdempotencyRecord completeTechnical(UUID id, long expectedVersion, Map<String, Object> responseBody) {
+    public IdempotencyRecord complete(UUID id, long expectedVersion, Map<String, Object> responseBody) {
         payloadValidator.sanitize(responseBody);
         repository.markCompleted(id, expectedVersion, 200, "application/json", responseBody);
         return repository.findById(id).orElseThrow();
-    }
-
-    @Transactional
-    public IdempotencyExecutionResult executeTechnical(
-            ActorContext actor,
-            String idempotencyKey,
-            String requestBody,
-            String requestContentType,
-            Supplier<Map<String, Object>> action) {
-        String normalizedKey = IdempotencyKeyValidator.normalizeOrThrow(idempotencyKey);
-        String requestHash = IdempotencyKeyValidator.hashRequest(requestBody);
-        Instant now = clock.instant();
-
-        Optional<IdempotencyExecutionResult> replay =
-                resolveExisting(actor, normalizedKey, requestHash, now);
-        if (replay.isPresent()) {
-            return replay.get();
-        }
-
-        IdempotencyRecord created = acquireTechnicalInProgress(actor, idempotencyKey, requestBody, requestContentType);
-        Map<String, Object> responseBody = action.get();
-        IdempotencyRecord completed = completeTechnical(created.id(), created.version(), responseBody);
-        return IdempotencyExecutionResult.completed(completed, false);
     }
 
     public void assertOptimisticVersion(UUID id, long expectedVersion) {
@@ -129,9 +189,9 @@ public class IdempotencyService {
     }
 
     private Optional<IdempotencyExecutionResult> resolveExisting(
-            ActorContext actor, String normalizedKey, String requestHash, Instant now) {
+            ActorContext actor, String operationCode, String normalizedKey, String requestHash, Instant now) {
         IdempotencyRecord existing = repository
-                .findByScope(actor.applicationId(), actor.actorId(), TECHNICAL_OPERATION, normalizedKey)
+                .findByScope(actor.applicationId(), actor.actorId(), operationCode, normalizedKey)
                 .orElse(null);
         if (existing == null) {
             return Optional.empty();

@@ -1,15 +1,15 @@
 # Database Schema Ownership Standard
 
-**Status:** Current architectural decision (Phase 3 implementation)  
-**Phase:** 3 — database, audit, idempotency foundation  
-**Branch:** `phase-03-database-audit-idempotency-foundation`  
-**Module:** `shared/platform-persistence`
+**Status:** Current architectural decision (Phase 4 implementation)
+**Phase:** 4 — KS Number identity issuance
+**Branch:** `phase-04-ksnumber-identity-issuance`
+**Module:** `shared/platform-persistence`, `shared/platform-identity`
 
 ## Purpose
 
 Define how PostgreSQL schemas and tables are owned, migrated, and accessed so that cross-cutting persistence foundations remain maintainable as business domains are added in later phases.
 
-## Schema registry (Phase 3)
+## Schema registry (Phase 3–4)
 
 | Schema | Owner | Migration authority | Application module |
 | --- | --- | --- | --- |
@@ -17,10 +17,11 @@ Define how PostgreSQL schemas and tables are owned, migrated, and accessed so th
 | `audit` | `securepay-core` | Same | `shared/platform-persistence` |
 | `events` | `securepay-core` | Same | `shared/platform-persistence` |
 | `idempotency` | `securepay-core` | Same | `shared/platform-persistence` |
+| `identity` | `securepay-core` | Same | `shared/platform-identity` |
 
-Future business schemas (e.g. `identity`, `ledger`, `evidence`) require a dedicated ADR before any migration merges.
+Future business schemas (e.g. `ledger`, `evidence`) require a dedicated ADR before any migration merges.
 
-## Table inventory (Phase 3)
+## Table inventory (Phase 3–4)
 
 | Schema | Table | Mutability | Purpose |
 | --- | --- | --- | --- |
@@ -29,8 +30,12 @@ Future business schemas (e.g. `identity`, `ledger`, `evidence`) require a dedica
 | `audit` | `audit_events` | Append-only | Immutable audit trail |
 | `events` | `outbox_events` | Insert + status updates | Transactional outbox |
 | `idempotency` | `idempotency_records` | Insert + status updates | Command idempotency |
+| `identity` | `ks_identities` | Insert + status updates | Canonical KS Number identities |
+| `identity` | `ks_number_aliases` | Insert + status updates | Memorable aliases |
 
-**Explicit:** Phase 3 introduces no business-domain tables.
+**Phase 4 migration:** `V20260723130000__ks_identity_foundation.sql`
+
+**Explicit:** Phase 3 introduced no business-domain tables; Phase 4 adds identity only.
 
 ## Persistence technology
 
@@ -49,6 +54,7 @@ Services depend on `platform-persistence` auto-configuration (`PlatformPersisten
 | Location | `database/migrations/` only |
 | Naming | `V{UTC_TIMESTAMP}__{snake_case_description}.sql` |
 | Phase 3 migration | `V20260723090000__phase_03_technical_foundations.sql` |
+| Phase 4 migration | `V20260723130000__ks_identity_foundation.sql` |
 | Immutability | Accepted migrations are never edited |
 | Phase 2 relocation | `public.platform_metadata` → `platform.platform_metadata` when present |
 
@@ -76,9 +82,9 @@ Phase 3 demonstrates a single transaction spanning `platform`, `audit`, and `eve
 4. Add integration tests (Flyway + Testcontainers pattern in `securepay-core`).
 5. Update this standard and phase completion report.
 
-## Phase 3 exclusions
+## Phase 3–4 exclusions
 
-- No KS Number, identity, agreement, ledger, or evidence tables
+- No agreement, ledger, or evidence tables (identity excepted in Phase 4)
 - No Control Centre direct database access ([ADR-0005](../decisions/ADR-0005-CONTROL-CENTRE-NO-DIRECT-DATABASE-ACCESS.md))
 - No PostgreSQL role provisioning in local Docker (documented for future environments)
 
@@ -87,3 +93,5 @@ Phase 3 demonstrates a single transaction spanning `platform`, `audit`, and `eve
 - [ADR-0007 Database schema ownership](../decisions/ADR-0007-DATABASE-SCHEMA-OWNERSHIP.md)
 - [Database Access Control Standard](../security/DATABASE_ACCESS_CONTROL_STANDARD.md)
 - [Transaction Boundary Standard](TRANSACTION_BOUNDARY_STANDARD.md)
+- [KS Identity Domain Standard](KS_IDENTITY_DOMAIN_STANDARD.md)
+- [ADR-0012 KS Number identity model](../decisions/ADR-0012-KS-NUMBER-IDENTITY-MODEL.md)

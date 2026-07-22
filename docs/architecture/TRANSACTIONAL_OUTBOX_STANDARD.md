@@ -1,9 +1,9 @@
 # Transactional Outbox Standard
 
-**Status:** Current architectural decision (Phase 3 implementation)  
-**Phase:** 3 — database, audit, idempotency foundation  
-**Branch:** `phase-03-database-audit-idempotency-foundation`  
-**Module:** `shared/platform-persistence`
+**Status:** Current architectural decision (Phase 4 implementation)
+**Phase:** 4 — KS Number identity issuance
+**Branch:** `phase-04-ksnumber-identity-issuance`
+**Module:** `shared/platform-persistence`, `shared/platform-identity`
 
 ## Purpose
 
@@ -39,7 +39,7 @@ Required envelope fields propagated to outbox columns where indexed:
 | `actor.id` | `actor_id` |
 | `source_service` | `source_service` |
 
-Aggregate routing uses `aggregate_type` and `aggregate_id` columns (Phase 3: `technical_test` / record key).
+Aggregate routing uses `aggregate_type` and `aggregate_id` columns (Phase 3: `technical_test`; Phase 4: `identity` / `identity_id`).
 
 ## Status lifecycle
 
@@ -84,13 +84,17 @@ Worker identity will use PostgreSQL role `outbox_worker` (see access control sta
 
 All status transitions increment `version`. See [Optimistic Locking Standard](OPTIMISTIC_LOCKING_STANDARD.md).
 
-## Phase 3 event types
+## Phase 3–4 event types
 
-| Event type | Constant | Purpose |
+| Event type | Constant / writer | Purpose |
 | --- | --- | --- |
-| `platform.test.created` | `TechnicalEventTypes.PLATFORM_TEST_CREATED` | Integration validation |
+| `platform.test.created` | `TechnicalEventTypes.PLATFORM_TEST_CREATED` | Phase 3 integration validation |
+| `identity.ks-number.issued` | `IdentityEventTypes.KS_NUMBER_ISSUED` | Canonical number issued |
+| `identity.status.changed` | `IdentityEventTypes.STATUS_CHANGED` | Identity lifecycle transition |
+| `identity.alias.created` | `IdentityEventTypes.ALIAS_CREATED` | Alias created |
+| `identity.alias.status.changed` | `IdentityEventTypes.ALIAS_STATUS_CHANGED` | Alias lifecycle transition |
 
-No business-domain event types in Phase 3.
+Phase 4 identity events are written by `IdentityOutboxWriter` with `event_version = 1.0.0`.
 
 ## Causation chain
 

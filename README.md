@@ -31,6 +31,18 @@ Phase 3 adds permanent persistence controls in PostgreSQL (not Redis):
 
 Module: `shared/platform-persistence`. See [Phase 3 completion report](docs/operations/PHASE_03_COMPLETION_REPORT.md).
 
+## Phase 4 KS Number identity
+
+Phase 4 implements the first business domain — canonical KS Number issuance and aliases:
+
+- `identity` schema (`ks_identities`, `ks_number_aliases`, `ks_number_sequence`)
+- Sequential issuance starting at `KS001` via PostgreSQL sequence
+- Idempotent operation `identity.ks-number.issue`
+- Identity and alias lifecycle with audit and outbox events
+- Service-layer only — no public identity HTTP endpoints
+
+Module: `shared/platform-identity`. See [Phase 4 completion report](docs/operations/PHASE_04_COMPLETION_REPORT.md).
+
 ## Why API-first?
 
 The public API is the stable contract. Web apps, mobile apps, partner platforms, and the Control Centre are **replaceable clients**.
@@ -116,6 +128,7 @@ docker compose --env-file .env.example config --quiet
 - [Phase 1 validation](.github/workflows/phase-1-validation.yml) — doctrine, OpenAPI, secrets, compose config
 - [Phase 2 validation](.github/workflows/phase-2-validation.yml) — Phase 1 + Gradle build + doctrine tests
 - [Phase 3 validation](.github/workflows/phase-3-validation.yml) — Phase 1 + persistence integration tests + compose runtime
+- [Phase 4 validation](.github/workflows/phase-4-validation.yml) — Phase 1 + identity integration tests + doctrine + compose runtime
 
 ## Branch and PR expectations
 
@@ -129,8 +142,9 @@ docker compose --env-file .env.example config --quiet
 | --- | --- |
 | Phase 1 | Doctrine, contracts, validation foundation |
 | Phase 2 | Executable platform skeleton — health endpoints only |
-| **Phase 3** (current) | Database, audit, idempotency, outbox foundations |
-| Phase 4+ | Domain implementation per ADRs |
+| Phase 3 | Database, audit, idempotency, outbox foundations |
+| **Phase 4** (current) | KS Number identity — issuance, aliases, lifecycle |
+| Phase 5+ | Authentication, agreements, ledger per ADRs |
 
 ## Secrets policy
 

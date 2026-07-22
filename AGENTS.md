@@ -124,14 +124,15 @@ docker compose --env-file .env.example down
 bash scripts/run_all_validations.sh
 ```
 
-GitHub Actions workflows run validation on pull requests and pushes to `main` (Phase 1–3).
+GitHub Actions workflows run validation on pull requests and pushes to `main` (Phase 1–4).
 
 ## Phased build strategy
 
 - **Phase 1:** Repository, doctrine, architecture, contracts, validation
 - **Phase 2:** Executable platform skeleton (health endpoints, Flyway, Redis, CI)
-- **Phase 3 (current):** Database, audit, idempotency, transactional outbox foundations — **no business domains**
-- **Phase 4+:** Domain implementation per ADRs
+- **Phase 3:** Database, audit, idempotency, transactional outbox foundations
+- **Phase 4 (current):** KS Number identity domain — issuance, aliases, lifecycle — **no public identity APIs, no auth, no payments**
+- **Phase 5+:** Authentication, agreements, ledger per ADRs
 
 ### Phase 3 permanent rules
 
@@ -146,6 +147,18 @@ GitHub Actions workflows run validation on pull requests and pushes to `main` (P
 | Public endpoints | Health endpoints remain the only public HTTP surface |
 
 Do not implement out-of-phase features unless explicitly instructed.
+
+### Phase 4 permanent rules
+
+| Rule | Requirement |
+| --- | --- |
+| KS allocation | Only `KsIdentityIssuanceService` may allocate canonical numbers via `identity.ks_number_sequence` |
+| Idempotency | Issuance must use operation `identity.ks-number.issue` with stable `issuance_request_key` |
+| Aliases | Must pass `AliasNormalizer`; cannot impersonate canonical KS Number format |
+| Schema ownership | Identity tables live in `identity` schema; access via `shared/platform-identity` only |
+| Audit/outbox | All issuance, lifecycle, and alias mutations append audit + outbox in same transaction |
+| Public endpoints | Health endpoints remain the only public HTTP surface |
+| Actor context | Phase 4 allows SYSTEM and TEST actors only — no end-user identity APIs |
 
 ## Key doctrine documents
 
