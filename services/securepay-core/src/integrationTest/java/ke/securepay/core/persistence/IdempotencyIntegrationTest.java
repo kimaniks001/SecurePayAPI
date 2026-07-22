@@ -135,7 +135,14 @@ class IdempotencyIntegrationTest {
         var inProgress = idempotencyService.acquireTechnicalInProgress(actor, key, "{\"x\":1}", "application/json");
 
         jdbcTemplate.update(
-                "UPDATE idempotency.idempotency_records SET expires_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 hour' WHERE id = ?",
+                """
+                UPDATE idempotency.idempotency_records
+                SET created_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '2 hours',
+                    updated_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '2 hours',
+                    expires_at = (NOW() AT TIME ZONE 'UTC') - INTERVAL '1 hour',
+                    locked_until = (NOW() AT TIME ZONE 'UTC') - INTERVAL '30 minutes'
+                WHERE id = ?
+                """,
                 inProgress.id());
 
         assertThatThrownBy(() -> idempotencyService.executeTechnical(
