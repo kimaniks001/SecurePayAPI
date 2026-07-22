@@ -6,16 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import ke.securepay.platform.persistence.actor.ActorContext;
 import ke.securepay.platform.persistence.actor.ActorContextFactory;
+import ke.securepay.platform.testing.contracts.EventEnvelopeSchemaSupport;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -25,13 +22,11 @@ class DomainEventEnvelopeContractTest {
     private static ObjectMapper objectMapper;
 
     @BeforeAll
-    static void loadSchema() throws Exception {
+    static void loadSchema() {
         objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        String schemaJson = Files.readString(Path.of("contracts/events/event-envelope-v1.schema.json"));
-        JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012);
-        schema = factory.getSchema(schemaJson);
+        schema = EventEnvelopeSchemaSupport.loadSchema();
     }
 
     @Test

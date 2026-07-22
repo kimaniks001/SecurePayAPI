@@ -24,10 +24,18 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.assertj.core)
     testImplementation(libs.spring.boot.starter.test)
+    testImplementation(project(":shared:platform-testing"))
     testImplementation(libs.jackson.datatype.jsr310)
     testImplementation(libs.json.schema.validator)
 }
 
+tasks.named<ProcessResources>("processTestResources") {
+    from("${rootProject.projectDir}/contracts/events") {
+        include("event-envelope-v1.schema.json")
+        into("contracts/events")
+    }
+}
+
 tasks.test {
-    workingDir = rootProject.projectDir
+    useJUnitPlatform()
 }

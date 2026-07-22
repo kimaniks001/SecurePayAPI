@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.ZoneOffset;
 import java.util.Map;
-import ke.securepay.core.support.IntegrationTestContainersConfig;
+import ke.securepay.core.support.SecurePayIntegrationTest;
 import ke.securepay.platform.persistence.actor.ActorContext;
 import ke.securepay.platform.persistence.actor.ActorContextFactory;
 import ke.securepay.platform.persistence.audit.AuditEventRepository;
@@ -15,16 +15,11 @@ import ke.securepay.platform.testing.support.DockerAssumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(IntegrationTestContainersConfig.class)
+@SecurePayIntegrationTest
 class AuditEventIntegrationTest {
 
     @Autowired

@@ -2,7 +2,6 @@ package ke.securepay.platform.persistence.config;
 
 import java.time.Clock;
 import ke.securepay.platform.common.time.ClockProvider;
-import ke.securepay.platform.common.time.SystemClockProvider;
 import ke.securepay.platform.persistence.audit.AuditPayloadValidator;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -16,11 +15,6 @@ public class PlatformPersistenceAutoConfiguration {
     @Bean
     Clock clock(ClockProvider clockProvider) {
         return clockProvider.clock();
-    }
-
-    @Bean
-    ClockProvider clockProvider() {
-        return new SystemClockProvider();
     }
 
     @Bean

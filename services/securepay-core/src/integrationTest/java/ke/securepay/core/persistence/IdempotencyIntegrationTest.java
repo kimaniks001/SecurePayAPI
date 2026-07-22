@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import ke.securepay.core.support.IntegrationTestContainersConfig;
+import ke.securepay.core.support.SecurePayIntegrationTest;
 import ke.securepay.platform.persistence.actor.ActorContext;
 import ke.securepay.platform.persistence.actor.ActorContextFactory;
 import ke.securepay.platform.persistence.exception.IdempotencyConflictException;
@@ -22,14 +22,9 @@ import ke.securepay.platform.testing.support.DockerAssumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(IntegrationTestContainersConfig.class)
+@SecurePayIntegrationTest
 class IdempotencyIntegrationTest {
 
     @Autowired

@@ -64,6 +64,7 @@ New: `shared/platform-persistence` — actor context, audit writer, idempotency 
 | --- | --- | --- |
 | Unit | `shared/platform-persistence/src/test` | Audit payload validation, event envelope JSON Schema contract |
 | Integration | `services/securepay-core/src/integrationTest/.../persistence/` | Flyway migration, audit immutability, idempotency, outbox transactions |
+| Integration (infrastructure) | `IntegrationTestInfrastructureTest` | Verifies single PostgreSQL/Redis Testcontainers, datasource/Redis connectivity, and classpath event schema availability |
 | Integration (relocation) | `FlywayMigrationIntegrationTest.platformMetadataWasRelocatedFromPublicToPlatformSchema` | Queries `information_schema` to prove `platform.platform_metadata` exists, `public.platform_metadata` does not, and `platform_phase` is `phase-03-database-audit-idempotency-foundation` |
 | Doctrine | `testing/doctrine` | Extended ArchUnit rules (17) + migration doctrine test |
 
@@ -89,26 +90,93 @@ curl --fail http://localhost:8080/health/dependencies
 docker compose --env-file .env.example down --volumes
 ```
 
+## CI correction (post-initial PR #3 failure)
+
+### Original CI failures (run 29914667506)
+
+| Failure | Symptom |
+| --- | --- |
+| Duplicate Spring bean | `BeanDefinitionOverrideException` during integration-test context startup (`IllegalStateException` in all persistence/health tests) |
+| Event schema path | `NoSuchFileException` in `OutboxIntegrationTest` `@BeforeAll` when loading `contracts/events/event-envelope-v1.schema.json` from the process working directory |
+| Workflow visibility | Doctrine, secret scan, and Compose checks were skipped after integration-test failure in a single job |
+
+### Root cause: duplicate `clockProvider` bean
+
+| Field | Value |
+| --- | --- |
+| Duplicate bean name | `clockProvider` |
+| First definition | `PlatformWebAutoConfiguration.clockProvider()` (`shared/platform-web`) |
+| Second definition | `PlatformPersistenceAutoConfiguration.clockProvider()` (`shared/platform-persistence`, added in Phase 3) |
+| Imported by integration tests | All `@SecurePayIntegrationTest` classes load the full `securepay-core` application context, which activates both auto-configurations via `spring.factories` / `AutoConfiguration.imports` |
+| Why integration context only | Phase 3 added `platform-persistence` to `securepay-core`; both `platform-web` and `platform-persistence` auto-configurations register a `clockProvider` `@Bean`. Spring Boot rejects the override by default. Unit tests that do not start the full application context were unaffected. |
+
+**Correction:** Removed the duplicate `clockProvider` bean from `PlatformPersistenceAutoConfiguration`. The `clock` bean now depends on the existing `ClockProvider` supplied by `PlatformWebAutoConfiguration`.
+
+### Root cause: event schema working-directory dependency
+
+`OutboxIntegrationTest` and `DomainEventEnvelopeContractTest` used `Files.readString(Path.of("contracts/events/..."))`, which only worked when the Gradle working directory was the repository root. CI executes from the module context, so the file was not found.
+
+**Correction:**
+
+- Added `EventEnvelopeSchemaSupport` in `shared/platform-testing` to load `contracts/events/event-envelope-v1.schema.json` from the test classpath via `ClassPathResource`.
+- Gradle `processTestResources` / `processIntegrationTestResources` copy the authoritative contract file from `contracts/events/event-envelope-v1.schema.json` into test resources at build time (no manually maintained duplicate).
+- `IntegrationTestInfrastructureTest.eventEnvelopeSchemaIsAvailableOnClasspath` fails clearly if the resource is missing.
+
+### Testcontainers configuration consolidation
+
+| Before | After |
+| --- | --- |
+| Each integration test class repeated `@SpringBootTest`, `@ActiveProfiles("test")`, `@Import(IntegrationTestContainersConfig.class)` | `@SecurePayIntegrationTest` meta-annotation imports `IntegrationTestContainersConfig` exactly once per class |
+| No infrastructure assertion | `IntegrationTestInfrastructureTest` asserts one `postgresContainer`, one `redisContainer`, working `DataSource`, and `RedisConnectionFactory` |
+
+`IntegrationTestContainersConfig` remains the single source for PostgreSQL 16 and Redis 7 `@ServiceConnection` beans.
+
+### CI workflow structure (updated)
+
+[`.github/workflows/phase-3-validation.yml`](../../.github/workflows/phase-3-validation.yml) now runs independent jobs:
+
+| Job | Purpose |
+| --- | --- |
+| `foundation-validation` | Phase 1 validation suite + Gradle wrapper check |
+| `unit-tests` | `./gradlew clean test` |
+| `integration-tests` | Mandatory Testcontainers (`SECUREPAY_REQUIRE_TESTCONTAINERS=true`); uploads reports on failure |
+| `doctrine-tests` | `./gradlew doctrineTest` |
+| `secret-scan` | `python3 scripts/scan_secrets.py` |
+| `compose-config` | `docker compose config` |
+| `compose-runtime` | Compose health validation (depends on `unit-tests` for build) |
+| `phase-3-complete` | Gate job requiring all mandatory jobs to pass |
+
+Doctrine, secret scan, and Compose config now report independently even when integration tests fail.
+
+### Integration test inventory (corrected)
+
+| Metric | Count |
+| --- | --- |
+| Test classes | 7 |
+| Test methods | 32 |
+| Prior CI executed count (24) | Lower because Spring context failed before most test methods ran; `OutboxIntegrationTest` failed in `@BeforeAll` (1 error, 5 methods not reached) |
+
 ## Validation results (local agent environment)
 
 | Check | Result |
 | --- | --- |
-| `./gradlew clean test` | **PASS** — unit + contract tests |
-| `./gradlew integrationTest` (no Docker) | **SKIPPED** — 29 tests with clear reason (includes explicit `platform_metadata` relocation assertion) |
-| `SECUREPAY_REQUIRE_TESTCONTAINERS=true ./gradlew integrationTest` | **FAIL** (expected without Docker) |
+| `./gradlew clean test` | **PASS** — unit + contract tests (classpath schema loading verified) |
+| `./gradlew integrationTest` (no Docker) | **SKIPPED** — 32 tests with clear reason |
+| `SECUREPAY_REQUIRE_TESTCONTAINERS=true ./gradlew integrationTest` | **FAIL** (expected without Docker — 7 class `initializationError`s from mandatory policy) |
 | `./gradlew doctrineTest` | **PASS** — 18 doctrine tests |
 | `bash scripts/run_all_validations.sh` | **PASS** |
 | `docker compose config` | **PASS** |
 | `python3 scripts/scan_secrets.py` | **PASS** |
-| Compose runtime | **NOT RUN** — Docker daemon unavailable locally |
+| Compose runtime | **NOT RUN** locally — delegated to GitHub Actions `compose-runtime` job |
+| Integration scenarios (Flyway, relocation, audit, idempotency, outbox) | **Delegated to GitHub Actions** — requires Docker |
 
 ## CI changes
 
 [`.github/workflows/phase-3-validation.yml`](../../.github/workflows/phase-3-validation.yml):
 
-- Phase 1 validation suite
-- Gradle wrapper, unit tests, mandatory integration tests (`SECUREPAY_REQUIRE_TESTCONTAINERS=true`)
-- Doctrine tests, secret scan, Compose config, Compose runtime health validation
+- Independent parallel jobs for foundation validation, unit tests, integration tests, doctrine tests, secret scan, Compose config, and Compose runtime
+- Mandatory integration tests (`SECUREPAY_REQUIRE_TESTCONTAINERS=true`) with failure artifact upload
+- Final `phase-3-complete` gate requiring all jobs to pass
 
 ## Security review
 

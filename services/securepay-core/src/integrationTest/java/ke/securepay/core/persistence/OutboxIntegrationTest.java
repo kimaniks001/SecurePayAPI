@@ -7,14 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationMessage;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
-import ke.securepay.core.support.IntegrationTestContainersConfig;
+import ke.securepay.core.support.SecurePayIntegrationTest;
+import ke.securepay.platform.testing.contracts.EventEnvelopeSchemaSupport;
 import ke.securepay.platform.persistence.actor.ActorContext;
 import ke.securepay.platform.persistence.actor.ActorContextFactory;
 import ke.securepay.platform.persistence.exception.OptimisticLockException;
@@ -27,17 +24,12 @@ import ke.securepay.platform.testing.support.DockerAssumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(IntegrationTestContainersConfig.class)
+@SecurePayIntegrationTest
 class OutboxIntegrationTest {
 
     private static JsonSchema eventSchema;
@@ -61,10 +53,9 @@ class OutboxIntegrationTest {
     private ObjectMapper objectMapper;
 
     @BeforeAll
-    static void enforceDockerPolicy() throws Exception {
+    static void enforceDockerPolicy() {
         DockerAssumptions.enforceDockerPolicyForIntegrationTests();
-        String schemaJson = Files.readString(Path.of("contracts/events/event-envelope-v1.schema.json"));
-        eventSchema = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012).getSchema(schemaJson);
+        eventSchema = EventEnvelopeSchemaSupport.loadSchema();
     }
 
     @Test

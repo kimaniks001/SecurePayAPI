@@ -90,3 +90,10 @@ tasks.register<Test>("integrationTest") {
     shouldRunAfter(tasks.named("test"))
     useJUnitPlatform()
 }
+
+tasks.named<ProcessResources>("processIntegrationTestResources") {
+    from("${rootProject.projectDir}/contracts/events") {
+        include("event-envelope-v1.schema.json")
+        into("contracts/events")
+    }
+}

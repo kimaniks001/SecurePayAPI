@@ -5,20 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import ke.securepay.core.support.IntegrationTestContainersConfig;
+import ke.securepay.core.support.SecurePayIntegrationTest;
 import ke.securepay.platform.testing.support.DockerAssumptions;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
-@ActiveProfiles("test")
-@Import(IntegrationTestContainersConfig.class)
+@SecurePayIntegrationTest
 class FlywayMigrationIntegrationTest {
 
     private static final Set<String> EXPECTED_SCHEMAS = Set.of("platform", "audit", "events", "idempotency");
