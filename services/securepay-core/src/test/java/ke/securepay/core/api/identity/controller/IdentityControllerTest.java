@@ -273,4 +273,73 @@ class IdentityControllerTest {
 
         verify(queryService).findById(identityId);
     }
+
+    @Test
+    void retrievesIdentityByCanonicalKsNumber() throws Exception {
+        UUID identityId =
+                UUID.fromString("77777777-7777-7777-7777-777777777777");
+        Instant createdAt = Instant.parse("2026-07-23T10:00:00Z");
+        Instant updatedAt = Instant.parse("2026-07-23T10:30:00Z");
+
+        KsIdentityRecord record = new KsIdentityRecord(
+                identityId,
+                KsNumber.fromSequence(7L),
+                7L,
+                IdentityType.INDIVIDUAL,
+                IdentityStatus.ACTIVE,
+                "James Kimani",
+                "request-007",
+                "request-hash-007",
+                "SYSTEM",
+                "securepay-core",
+                "request-id-007",
+                "correlation-id-007",
+                createdAt,
+                updatedAt,
+                null,
+                null,
+                1L
+        );
+
+        when(queryService.findByCanonicalKsNumber("KS007"))
+                .thenReturn(Optional.of(record));
+
+        mockMvc.perform(
+                        get("/api/v1/identities/by-ksnumber/{canonicalKsNumber}",
+                                "KS007")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.identityId")
+                        .value(identityId.toString()))
+                .andExpect(jsonPath("$.canonicalKsNumber")
+                        .value("KS007"))
+                .andExpect(jsonPath("$.sequenceNumber")
+                        .value(7))
+                .andExpect(jsonPath("$.identityType")
+                        .value("INDIVIDUAL"))
+                .andExpect(jsonPath("$.status")
+                        .value("ACTIVE"))
+                .andExpect(jsonPath("$.displayName")
+                        .value("James Kimani"));
+
+        verify(queryService).findByCanonicalKsNumber("KS007");
+    }
+
+    @Test
+    void returnsNotFoundWhenCanonicalKsNumberDoesNotExist() throws Exception {
+        when(queryService.findByCanonicalKsNumber("KS999"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(
+                        get("/api/v1/identities/by-ksnumber/{canonicalKsNumber}",
+                                "KS999")
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("IDENTITY_NOT_FOUND"))
+                .andExpect(jsonPath("$.message")
+                        .value("Identity not found"));
+
+        verify(queryService).findByCanonicalKsNumber("KS999");
+    }
 }

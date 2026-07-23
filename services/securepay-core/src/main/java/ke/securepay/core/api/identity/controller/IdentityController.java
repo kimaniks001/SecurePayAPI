@@ -61,6 +61,20 @@ public class IdentityController {
         return IdentityResponseMapper.from(result);
     }
 
+
+    @GetMapping("/by-ksnumber/{canonicalKsNumber}")
+    public RetrievedIdentityResponse retrieveByCanonicalKsNumber(
+            @PathVariable String canonicalKsNumber) {
+
+        KsIdentityRecord record =
+                queryService.findByCanonicalKsNumber(canonicalKsNumber)
+                        .orElseThrow(() ->
+                                new IdentityNotFoundException(
+                                        "Identity not found"));
+
+        return IdentityResponseMapper.retrievedFrom(record);
+    }
+
     @GetMapping("/{identityId}")
     public RetrievedIdentityResponse retrieveById(
             @PathVariable UUID identityId) {
