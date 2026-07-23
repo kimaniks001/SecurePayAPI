@@ -1,8 +1,10 @@
 package ke.securepay.core.api.error;
+import ke.securepay.platform.identity.alias.InvalidAliasException;
 
 import ke.securepay.platform.identity.exception.IdentityLifecycleException;
 import ke.securepay.platform.identity.exception.IdentityNotFoundException;
 import ke.securepay.platform.identity.exception.IssuanceOwnershipConflictException;
+import ke.securepay.platform.identity.ksnumber.InvalidKsNumberException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -36,6 +38,26 @@ public class ApiExceptionHandler {
         );
     }
 
+
+    @ExceptionHandler(InvalidKsNumberException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiErrorResponse handleInvalidKsNumber(
+            InvalidKsNumberException exception) {
+        return new ApiErrorResponse(
+                "INVALID_KS_NUMBER",
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(InvalidAliasException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiErrorResponse handleInvalidAlias(
+            InvalidAliasException exception) {
+        return new ApiErrorResponse(
+                "INVALID_ALIAS",
+                exception.getMessage()
+        );
+    }
 
     @ExceptionHandler(IdentityNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)

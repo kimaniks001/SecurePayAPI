@@ -8,9 +8,11 @@ import ke.securepay.core.api.identity.response.IssuedKsIdentityResponse;
 import ke.securepay.core.api.identity.response.RetrievedIdentityResponse;
 import ke.securepay.core.api.identity.response.TransitionedIdentityResponse;
 import java.util.UUID;
+import ke.securepay.platform.identity.alias.AliasNormalizer;
 import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
 import ke.securepay.platform.identity.command.LifecycleTransitionCommand;
 import ke.securepay.platform.identity.exception.IdentityNotFoundException;
+import ke.securepay.platform.identity.ksnumber.KsNumber;
 import ke.securepay.platform.identity.model.KsIdentityRecord;
 import ke.securepay.platform.identity.result.IssuedKsIdentityResult;
 import ke.securepay.platform.identity.service.KsIdentityIssuanceService;
@@ -66,8 +68,11 @@ public class IdentityController {
     public RetrievedIdentityResponse retrieveByCanonicalKsNumber(
             @PathVariable String canonicalKsNumber) {
 
+        String validatedKsNumber =
+                KsNumber.parse(canonicalKsNumber).canonicalValue();
+
         KsIdentityRecord record =
-                queryService.findByCanonicalKsNumber(canonicalKsNumber)
+                queryService.findByCanonicalKsNumber(validatedKsNumber)
                         .orElseThrow(() ->
                                 new IdentityNotFoundException(
                                         "Identity not found"));
@@ -80,8 +85,11 @@ public class IdentityController {
     public RetrievedIdentityResponse retrieveByAlias(
             @PathVariable String alias) {
 
+        String normalizedAlias =
+                AliasNormalizer.normalizeOrThrow(alias).normalizedAlias();
+
         KsIdentityRecord record =
-                queryService.findByNormalizedAlias(alias)
+                queryService.findByNormalizedAlias(normalizedAlias)
                         .orElseThrow(() ->
                                 new IdentityNotFoundException(
                                         "Identity not found"));
