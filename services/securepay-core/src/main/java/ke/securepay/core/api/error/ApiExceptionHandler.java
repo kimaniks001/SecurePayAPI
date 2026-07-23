@@ -1,5 +1,6 @@
 package ke.securepay.core.api.error;
 
+import ke.securepay.platform.identity.exception.IssuanceOwnershipConflictException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -30,6 +31,17 @@ public class ApiExceptionHandler {
                 "VALIDATION_ERROR",
                 "Request validation failed",
                 fieldErrors
+        );
+    }
+
+    @ExceptionHandler(IssuanceOwnershipConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleIssuanceOwnershipConflict(
+            IssuanceOwnershipConflictException exception) {
+
+        return new ApiErrorResponse(
+                "ISSUANCE_OWNERSHIP_CONFLICT",
+                exception.getMessage()
         );
     }
 }

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 
 import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
+import ke.securepay.platform.identity.exception.IssuanceOwnershipConflictException;
 import ke.securepay.platform.identity.ksnumber.KsNumber;
 import ke.securepay.platform.identity.model.IdentityStatus;
 import ke.securepay.platform.identity.model.IdentityType;
@@ -107,4 +108,28 @@ class IdentityControllerTest {
                 .issue(any(IssueKsIdentityCommand.class));
     }
 
+
+    @Test
+    void returnsConflictWhenIssuanceRequestKeyHasDifferentOwnership() throws Exception {
+        when(issuanceService.issue(any(IssueKsIdentityCommand.class)))
+                .thenThrow(new IssuanceOwnershipConflictException(
+                        "Issuance request key already owns an identity with a different request fingerprint"));
+
+        mockMvc.perform(
+                        post("/api/v1/identities")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "issuanceRequestKey": "request-001",
+                                          "identityType": "INDIVIDUAL",
+                                          "displayName": "Different Person"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code")
+                        .value("ISSUANCE_OWNERSHIP_CONFLICT"))
+                .andExpect(jsonPath("$.message")
+                        .value("Issuance request key already owns an identity with a different request fingerprint"));
+    }
 }
