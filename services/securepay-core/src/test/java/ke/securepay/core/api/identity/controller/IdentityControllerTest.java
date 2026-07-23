@@ -4,19 +4,26 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
+import ke.securepay.platform.identity.command.LifecycleTransitionCommand;
+import ke.securepay.platform.identity.exception.IdentityLifecycleException;
+import ke.securepay.platform.identity.exception.IdentityNotFoundException;
 import ke.securepay.platform.identity.exception.IssuanceOwnershipConflictException;
 import ke.securepay.platform.identity.ksnumber.KsNumber;
 import ke.securepay.platform.identity.model.IdentityStatus;
+import ke.securepay.platform.identity.model.KsIdentityRecord;
 import ke.securepay.platform.identity.model.IdentityType;
 import ke.securepay.platform.identity.result.IssuedKsIdentityResult;
 import ke.securepay.platform.identity.service.KsIdentityIssuanceService;
+import ke.securepay.platform.identity.service.KsIdentityLifecycleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -32,6 +39,9 @@ class IdentityControllerTest {
 
     @MockitoBean
     private KsIdentityIssuanceService issuanceService;
+
+    @MockitoBean
+    private KsIdentityLifecycleService lifecycleService;
 
     @Test
     void issuesIdentityAndReturnsCreatedResponse() throws Exception {
@@ -131,5 +141,110 @@ class IdentityControllerTest {
                         .value("ISSUANCE_OWNERSHIP_CONFLICT"))
                 .andExpect(jsonPath("$.message")
                         .value("Issuance request key already owns an identity with a different request fingerprint"));
+    }
+
+    @Test
+    void transitionsIdentityStatusAndReturnsUpdatedResponse() throws Exception {
+        UUID identityId =
+                UUID.fromString("22222222-2222-2222-2222-222222222222");
+        Instant createdAt = Instant.parse("2026-07-23T08:00:00Z");
+        Instant updatedAt = Instant.parse("2026-07-23T08:30:00Z");
+
+        KsIdentityRecord record = new KsIdentityRecord(
+                identityId,
+                KsNumber.fromSequence(2L),
+                2L,
+                IdentityType.INDIVIDUAL,
+                IdentityStatus.SUSPENDED,
+                "James Kimani",
+                "request-002",
+                "request-hash-002",
+                "SYSTEM",
+                "securepay-core",
+                "request-id-002",
+                "correlation-id-002",
+                createdAt,
+                updatedAt,
+                updatedAt,
+                null,
+                2L
+        );
+
+        when(lifecycleService.transition(any(LifecycleTransitionCommand.class)))
+                .thenReturn(record);
+
+        mockMvc.perform(
+                        patch("/api/v1/identities/{identityId}/status", identityId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "targetStatus": "SUSPENDED",
+                                          "reason": "Manual compliance review"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.identityId")
+                        .value(identityId.toString()))
+                .andExpect(jsonPath("$.canonicalKsNumber")
+                        .value("KS002"))
+                .andExpect(jsonPath("$.status")
+                        .value("SUSPENDED"))
+                .andExpect(jsonPath("$.updatedAt")
+                        .value("2026-07-23T08:30:00Z"));
+
+        verify(lifecycleService)
+                .transition(any(LifecycleTransitionCommand.class));
+    }
+
+    @Test
+    void returnsNotFoundWhenIdentityDoesNotExist() throws Exception {
+        UUID identityId =
+                UUID.fromString("33333333-3333-3333-3333-333333333333");
+
+        when(lifecycleService.transition(any(LifecycleTransitionCommand.class)))
+                .thenThrow(new IdentityNotFoundException("Identity not found"));
+
+        mockMvc.perform(
+                        patch("/api/v1/identities/{identityId}/status", identityId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "targetStatus": "ACTIVE",
+                                          "reason": "Activate verified identity"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("IDENTITY_NOT_FOUND"))
+                .andExpect(jsonPath("$.message")
+                        .value("Identity not found"));
+    }
+
+    @Test
+    void returnsConflictWhenIdentityTransitionIsNotAllowed() throws Exception {
+        UUID identityId =
+                UUID.fromString("44444444-4444-4444-4444-444444444444");
+
+        when(lifecycleService.transition(any(LifecycleTransitionCommand.class)))
+                .thenThrow(new IdentityLifecycleException(
+                        "Transition not allowed: CLOSED -> ACTIVE"));
+
+        mockMvc.perform(
+                        patch("/api/v1/identities/{identityId}/status", identityId)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "targetStatus": "ACTIVE",
+                                          "reason": "Attempt reopening"
+                                        }
+                                        """)
+                )
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code")
+                        .value("IDENTITY_LIFECYCLE_CONFLICT"))
+                .andExpect(jsonPath("$.message")
+                        .value("Transition not allowed: CLOSED -> ACTIVE"));
     }
 }

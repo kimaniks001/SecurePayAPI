@@ -1,5 +1,7 @@
 package ke.securepay.core.api.error;
 
+import ke.securepay.platform.identity.exception.IdentityLifecycleException;
+import ke.securepay.platform.identity.exception.IdentityNotFoundException;
 import ke.securepay.platform.identity.exception.IssuanceOwnershipConflictException;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -31,6 +33,29 @@ public class ApiExceptionHandler {
                 "VALIDATION_ERROR",
                 "Request validation failed",
                 fieldErrors
+        );
+    }
+
+
+    @ExceptionHandler(IdentityNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiErrorResponse handleIdentityNotFound(
+            IdentityNotFoundException exception) {
+
+        return new ApiErrorResponse(
+                "IDENTITY_NOT_FOUND",
+                exception.getMessage()
+        );
+    }
+
+    @ExceptionHandler(IdentityLifecycleException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleIdentityLifecycleConflict(
+            IdentityLifecycleException exception) {
+
+        return new ApiErrorResponse(
+                "IDENTITY_LIFECYCLE_CONFLICT",
+                exception.getMessage()
         );
     }
 
