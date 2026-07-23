@@ -1,6 +1,7 @@
 package ke.securepay.core.api.identity.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -77,4 +78,33 @@ class IdentityControllerTest {
         verify(issuanceService)
                 .issue(any(IssueKsIdentityCommand.class));
     }
+    @Test
+    void rejectsInvalidRequestWithValidationErrorResponse() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/identities")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {
+                                          "issuanceRequestKey": "",
+                                          "identityType": null,
+                                          "displayName": ""
+                                        }
+                                        """)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message")
+                        .value("Request validation failed"))
+                .andExpect(jsonPath("$.fieldErrors.issuanceRequestKey")
+                        .value("must not be blank"))
+                .andExpect(jsonPath("$.fieldErrors.identityType")
+                        .value("must not be null"))
+                .andExpect(jsonPath("$.fieldErrors.displayName")
+                        .value("must not be blank"));
+
+        verify(issuanceService, never())
+                .issue(any(IssueKsIdentityCommand.class));
+    }
+
 }
