@@ -344,6 +344,23 @@ class IdentityControllerTest {
     }
 
     @Test
+    void rejectsInvalidCanonicalKsNumberBeforeQuerying() throws Exception {
+        mockMvc.perform(
+                        get(
+                                "/api/v1/identities/by-ksnumber/{canonicalKsNumber}",
+                                "ks008"
+                        )
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value("INVALID_KS_NUMBER"))
+                .andExpect(jsonPath("$.message")
+                        .value("Malformed canonical KS Number: ks008"));
+
+        verify(queryService, never()).findByCanonicalKsNumber(any());
+    }
+
+    @Test
     void retrievesIdentityByAlias() throws Exception {
         UUID identityId =
                 UUID.fromString("88888888-8888-8888-8888-888888888888");
@@ -391,6 +408,20 @@ class IdentityControllerTest {
                         .value("James Kimani"));
 
         verify(queryService).findByNormalizedAlias("keyman");
+    }
+
+    @Test
+    void rejectsInvalidAliasBeforeQuerying() throws Exception {
+        mockMvc.perform(
+                        get("/api/v1/identities/by-alias/{alias}", "KS008")
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code")
+                        .value("INVALID_ALIAS"))
+                .andExpect(jsonPath("$.message")
+                        .value("Alias must not impersonate a canonical KS Number"));
+
+        verify(queryService, never()).findByNormalizedAlias(any());
     }
 
     @Test
