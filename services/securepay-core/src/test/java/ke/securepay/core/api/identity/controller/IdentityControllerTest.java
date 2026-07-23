@@ -1,5 +1,6 @@
 package ke.securepay.core.api.identity.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -14,6 +15,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import ke.securepay.core.security.CurrentActorProvider;
 import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
 import ke.securepay.platform.identity.command.LifecycleTransitionCommand;
 import ke.securepay.platform.identity.exception.IdentityLifecycleException;
@@ -27,7 +29,10 @@ import ke.securepay.platform.identity.result.IssuedKsIdentityResult;
 import ke.securepay.platform.identity.service.KsIdentityIssuanceService;
 import ke.securepay.platform.identity.service.KsIdentityLifecycleService;
 import ke.securepay.platform.identity.service.KsIdentityQueryService;
+import ke.securepay.platform.persistence.actor.ActorContext;
+import ke.securepay.platform.persistence.actor.ActorType;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -49,6 +54,9 @@ class IdentityControllerTest {
     @MockitoBean
     private KsIdentityQueryService queryService;
 
+    @MockitoBean
+    private CurrentActorProvider currentActorProvider;
+
     @Test
     void issuesIdentityAndReturnsCreatedResponse() throws Exception {
         UUID identityId =
@@ -64,6 +72,21 @@ class IdentityControllerTest {
                         false
                 );
 
+        ActorContext actor = new ActorContext(
+                ActorType.USER,
+                "user-123",
+                "KS001",
+                null,
+                true,
+                "password_otp",
+                "req-123",
+                "corr-123",
+                "securepay-core",
+                null,
+                "device-123"
+        );
+
+        when(currentActorProvider.currentActor()).thenReturn(actor);
         when(issuanceService.issue(any(IssueKsIdentityCommand.class)))
                 .thenReturn(result);
 
@@ -92,8 +115,13 @@ class IdentityControllerTest {
                 .andExpect(jsonPath("$.replayed")
                         .value(false));
 
-        verify(issuanceService)
-                .issue(any(IssueKsIdentityCommand.class));
+        ArgumentCaptor<IssueKsIdentityCommand> commandCaptor =
+                ArgumentCaptor.forClass(IssueKsIdentityCommand.class);
+
+        verify(issuanceService).issue(commandCaptor.capture());
+
+        assertThat(commandCaptor.getValue().actorContext())
+                .isSameAs(actor);
     }
     @Test
     void rejectsInvalidRequestWithValidationErrorResponse() throws Exception {
@@ -176,6 +204,21 @@ class IdentityControllerTest {
                 2L
         );
 
+        ActorContext actor = new ActorContext(
+                ActorType.USER,
+                "user-456",
+                "KS002",
+                null,
+                true,
+                "password_otp",
+                "req-456",
+                "corr-456",
+                "securepay-core",
+                null,
+                "device-456"
+        );
+
+        when(currentActorProvider.currentActor()).thenReturn(actor);
         when(lifecycleService.transition(any(LifecycleTransitionCommand.class)))
                 .thenReturn(record);
 
@@ -199,8 +242,13 @@ class IdentityControllerTest {
                 .andExpect(jsonPath("$.updatedAt")
                         .value("2026-07-23T08:30:00Z"));
 
-        verify(lifecycleService)
-                .transition(any(LifecycleTransitionCommand.class));
+        ArgumentCaptor<LifecycleTransitionCommand> commandCaptor =
+                ArgumentCaptor.forClass(LifecycleTransitionCommand.class);
+
+        verify(lifecycleService).transition(commandCaptor.capture());
+
+        assertThat(commandCaptor.getValue().actorContext())
+                .isSameAs(actor);
     }
 
     @Test
