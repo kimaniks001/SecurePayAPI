@@ -75,6 +75,21 @@ public class IdentityController {
         return IdentityResponseMapper.retrievedFrom(record);
     }
 
+
+    @GetMapping("/by-alias/{alias}")
+    public RetrievedIdentityResponse retrieveByAlias(
+            @PathVariable String alias) {
+
+        KsIdentityRecord record =
+                queryService.findByNormalizedAlias(alias)
+                        .orElseThrow(() ->
+                                new IdentityNotFoundException(
+                                        "Identity not found"));
+
+        return IdentityResponseMapper.retrievedFrom(record);
+    }
+
+
     @GetMapping("/{identityId}")
     public RetrievedIdentityResponse retrieveById(
             @PathVariable UUID identityId) {

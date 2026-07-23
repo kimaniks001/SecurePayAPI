@@ -342,4 +342,71 @@ class IdentityControllerTest {
 
         verify(queryService).findByCanonicalKsNumber("KS999");
     }
+
+    @Test
+    void retrievesIdentityByAlias() throws Exception {
+        UUID identityId =
+                UUID.fromString("88888888-8888-8888-8888-888888888888");
+        Instant createdAt = Instant.parse("2026-07-23T11:00:00Z");
+        Instant updatedAt = Instant.parse("2026-07-23T11:30:00Z");
+
+        KsIdentityRecord record = new KsIdentityRecord(
+                identityId,
+                KsNumber.fromSequence(8L),
+                8L,
+                IdentityType.INDIVIDUAL,
+                IdentityStatus.ACTIVE,
+                "James Kimani",
+                "request-008",
+                "request-hash-008",
+                "SYSTEM",
+                "securepay-core",
+                "request-id-008",
+                "correlation-id-008",
+                createdAt,
+                updatedAt,
+                null,
+                null,
+                1L
+        );
+
+        when(queryService.findByNormalizedAlias("keyman"))
+                .thenReturn(Optional.of(record));
+
+        mockMvc.perform(
+                        get("/api/v1/identities/by-alias/{alias}", "keyman")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.identityId")
+                        .value(identityId.toString()))
+                .andExpect(jsonPath("$.canonicalKsNumber")
+                        .value("KS008"))
+                .andExpect(jsonPath("$.sequenceNumber")
+                        .value(8))
+                .andExpect(jsonPath("$.identityType")
+                        .value("INDIVIDUAL"))
+                .andExpect(jsonPath("$.status")
+                        .value("ACTIVE"))
+                .andExpect(jsonPath("$.displayName")
+                        .value("James Kimani"));
+
+        verify(queryService).findByNormalizedAlias("keyman");
+    }
+
+    @Test
+    void returnsNotFoundWhenAliasDoesNotExist() throws Exception {
+        when(queryService.findByNormalizedAlias("unknown"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(
+                        get("/api/v1/identities/by-alias/{alias}", "unknown")
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("IDENTITY_NOT_FOUND"))
+                .andExpect(jsonPath("$.message")
+                        .value("Identity not found"));
+
+        verify(queryService).findByNormalizedAlias("unknown");
+    }
 }
