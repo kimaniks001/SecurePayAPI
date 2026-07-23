@@ -1,6 +1,8 @@
 package ke.securepay.core.api.identity.mapper;
 
 import ke.securepay.core.api.identity.response.IssuedKsIdentityResponse;
+import ke.securepay.core.api.identity.response.TransitionedIdentityResponse;
+import ke.securepay.platform.identity.model.KsIdentityRecord;
 import ke.securepay.platform.identity.result.IssuedKsIdentityResult;
 
 public final class IdentityResponseMapper {
@@ -15,6 +17,14 @@ public final class IdentityResponseMapper {
                 result.identityType().name(),
                 result.status().name(),
                 result.replayed()
+        );
+    }
+    public static TransitionedIdentityResponse from(KsIdentityRecord record) {
+        return new TransitionedIdentityResponse(
+                record.id(),
+                record.canonicalKsNumber().canonicalValue(),
+                record.status().name(),
+                record.updatedAt()
         );
     }
 }
