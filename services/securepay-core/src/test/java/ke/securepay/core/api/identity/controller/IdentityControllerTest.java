@@ -4,12 +4,14 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
@@ -24,6 +26,7 @@ import ke.securepay.platform.identity.model.IdentityType;
 import ke.securepay.platform.identity.result.IssuedKsIdentityResult;
 import ke.securepay.platform.identity.service.KsIdentityIssuanceService;
 import ke.securepay.platform.identity.service.KsIdentityLifecycleService;
+import ke.securepay.platform.identity.service.KsIdentityQueryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -42,6 +45,9 @@ class IdentityControllerTest {
 
     @MockitoBean
     private KsIdentityLifecycleService lifecycleService;
+
+    @MockitoBean
+    private KsIdentityQueryService queryService;
 
     @Test
     void issuesIdentityAndReturnsCreatedResponse() throws Exception {
@@ -246,5 +252,25 @@ class IdentityControllerTest {
                         .value("IDENTITY_LIFECYCLE_CONFLICT"))
                 .andExpect(jsonPath("$.message")
                         .value("Transition not allowed: CLOSED -> ACTIVE"));
+    }
+
+    @Test
+    void returnsNotFoundWhenRetrievedIdentityDoesNotExist() throws Exception {
+        UUID identityId =
+                UUID.fromString("66666666-6666-6666-6666-666666666666");
+
+        when(queryService.findById(identityId))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(
+                        get("/api/v1/identities/{identityId}", identityId)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("IDENTITY_NOT_FOUND"))
+                .andExpect(jsonPath("$.message")
+                        .value("Identity not found"));
+
+        verify(queryService).findById(identityId);
     }
 }
