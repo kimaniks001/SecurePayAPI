@@ -5,16 +5,20 @@ import ke.securepay.core.api.identity.mapper.IdentityResponseMapper;
 import ke.securepay.core.api.identity.request.IssueKsIdentityRequest;
 import ke.securepay.core.api.identity.request.TransitionIdentityRequest;
 import ke.securepay.core.api.identity.response.IssuedKsIdentityResponse;
+import ke.securepay.core.api.identity.response.RetrievedIdentityResponse;
 import ke.securepay.core.api.identity.response.TransitionedIdentityResponse;
 import java.util.UUID;
 import ke.securepay.platform.identity.command.IssueKsIdentityCommand;
 import ke.securepay.platform.identity.command.LifecycleTransitionCommand;
+import ke.securepay.platform.identity.exception.IdentityNotFoundException;
 import ke.securepay.platform.identity.model.KsIdentityRecord;
 import ke.securepay.platform.identity.result.IssuedKsIdentityResult;
 import ke.securepay.platform.identity.service.KsIdentityIssuanceService;
 import ke.securepay.platform.identity.service.KsIdentityLifecycleService;
+import ke.securepay.platform.identity.service.KsIdentityQueryService;
 import ke.securepay.platform.persistence.actor.ActorContextFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,12 +33,15 @@ public class IdentityController {
 
     private final KsIdentityIssuanceService issuanceService;
     private final KsIdentityLifecycleService lifecycleService;
+    private final KsIdentityQueryService queryService;
 
     public IdentityController(
             KsIdentityIssuanceService issuanceService,
-            KsIdentityLifecycleService lifecycleService) {
+            KsIdentityLifecycleService lifecycleService,
+            KsIdentityQueryService queryService) {
         this.issuanceService = issuanceService;
         this.lifecycleService = lifecycleService;
+        this.queryService = queryService;
     }
 
     @PostMapping
@@ -53,6 +60,18 @@ public class IdentityController {
 
         return IdentityResponseMapper.from(result);
     }
+
+    @GetMapping("/{identityId}")
+    public RetrievedIdentityResponse retrieveById(
+            @PathVariable UUID identityId) {
+
+        KsIdentityRecord record = queryService.findById(identityId)
+                .orElseThrow(() ->
+                        new IdentityNotFoundException("Identity not found"));
+
+        return IdentityResponseMapper.retrievedFrom(record);
+    }
+
     @PatchMapping("/{identityId}/status")
     public TransitionedIdentityResponse transitionStatus(
             @PathVariable UUID identityId,
