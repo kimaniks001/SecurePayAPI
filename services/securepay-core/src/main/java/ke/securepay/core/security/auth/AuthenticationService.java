@@ -1,11 +1,11 @@
 package ke.securepay.core.security.auth;
 
 /**
- * Verifies credentials and returns the next authentication state.
+ * Verifies primary credentials and creates a pending MFA challenge.
  *
- * Session or token creation is intentionally outside this contract.
+ * This step never creates an active authenticated session.
  */
 public interface AuthenticationService {
 
-    AuthenticationResult authenticate(AuthenticateCommand command);
+    PendingAuthenticationResult authenticate(AuthenticateCommand command);
 }
