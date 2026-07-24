@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.spring.boot.starter.data.jdbc)
     implementation(libs.spring.boot.starter.data.redis)
+    implementation(libs.spring.security.crypto)
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.postgresql)
     implementation(libs.postgresql)

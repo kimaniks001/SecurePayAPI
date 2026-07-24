@@ -18,7 +18,7 @@ import ke.securepay.platform.identity.result.IssuedKsIdentityResult;
 import ke.securepay.platform.identity.service.KsIdentityIssuanceService;
 import ke.securepay.platform.identity.service.KsIdentityLifecycleService;
 import ke.securepay.platform.identity.service.KsIdentityQueryService;
-import ke.securepay.platform.persistence.actor.ActorContextFactory;
+import ke.securepay.core.security.CurrentActorProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,14 +36,17 @@ public class IdentityController {
     private final KsIdentityIssuanceService issuanceService;
     private final KsIdentityLifecycleService lifecycleService;
     private final KsIdentityQueryService queryService;
+    private final CurrentActorProvider currentActorProvider;
 
     public IdentityController(
             KsIdentityIssuanceService issuanceService,
             KsIdentityLifecycleService lifecycleService,
-            KsIdentityQueryService queryService) {
+            KsIdentityQueryService queryService,
+            CurrentActorProvider currentActorProvider) {
         this.issuanceService = issuanceService;
         this.lifecycleService = lifecycleService;
         this.queryService = queryService;
+        this.currentActorProvider = currentActorProvider;
     }
 
     @PostMapping
@@ -55,7 +58,7 @@ public class IdentityController {
                 request.issuanceRequestKey(),
                 request.identityType(),
                 request.displayName(),
-                ActorContextFactory.system("securepay-core")
+                currentActorProvider.currentActor()
         );
 
         IssuedKsIdentityResult result = issuanceService.issue(command);
@@ -118,7 +121,7 @@ public class IdentityController {
                 identityId,
                 request.targetStatus(),
                 request.reason(),
-                ActorContextFactory.system("securepay-core")
+                currentActorProvider.currentActor()
         );
 
         KsIdentityRecord record = lifecycleService.transition(command);

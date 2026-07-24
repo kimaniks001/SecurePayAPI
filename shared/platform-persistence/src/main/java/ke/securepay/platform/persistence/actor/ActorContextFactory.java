@@ -11,6 +11,28 @@ public final class ActorContextFactory {
 
     private ActorContextFactory() {}
 
+    public static ActorContext user(
+            String actorId,
+            String actorKsNumber,
+            String authenticationMethod,
+            String sourceService,
+            String applicationId,
+            String sourceIpHash,
+            String deviceId) {
+        return new ActorContext(
+                ActorType.USER,
+                actorId,
+                actorKsNumber,
+                applicationId,
+                true,
+                authenticationMethod,
+                resolveRequestId(),
+                resolveCorrelationId(),
+                sourceService,
+                sourceIpHash,
+                deviceId);
+    }
+
     public static ActorContext system(String sourceService) {
         return new ActorContext(
                 ActorType.SYSTEM,
