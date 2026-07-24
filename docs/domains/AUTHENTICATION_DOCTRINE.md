@@ -1,7 +1,7 @@
 # Authentication Doctrine
 
 **Status:** Locked doctrine  
-**Phase:** 1 — documentation only (no authentication implementation in this phase)
+**Phase:** Locked in Phase 1; implementation alignment approved in Phase 14.5
 
 ## Normal login sequence
 
@@ -50,6 +50,51 @@ KS Number → password → OTP → authenticated session
 | **Locked doctrine** | Administrators require stronger and separately audited authentication. |
 | **Locked doctrine** | Recovery events are audited. |
 
+## Session activation boundary
+
+| Classification | Rule |
+| --- | --- |
+| **Locked doctrine** | Password verification alone never creates an active authenticated session. |
+| **Locked doctrine** | Password success creates or advances a pending MFA challenge. |
+| **Locked doctrine** | Session activation requires trusted proof of password and approved second-factor completion. |
+| **Locked doctrine** | Completion proof is actor-bound, challenge-bound, expiry-bound and single-use. |
+| **Locked doctrine** | No production password-only bypass may be enabled by configuration. |
+
+## Identity and credential eligibility
+
+| Classification | Rule |
+| --- | --- |
+| **Locked doctrine** | Normal authentication requires both an ACTIVE identity and an active credential. |
+| **Locked doctrine** | PENDING identities cannot activate normal authenticated sessions. |
+| **Locked doctrine** | SUSPENDED and CLOSED identities cannot authenticate. |
+| **Locked doctrine** | Suspension, closure, credential deactivation, password change or security-version invalidation revokes or invalidates affected sessions. |
+
+## Credential enrolment and recovery
+
+| Classification | Rule |
+| --- | --- |
+| **Current architectural decision** | Initial password creation is credential enrolment and requires trusted identity-ownership proof. |
+| **Locked doctrine** | Knowledge of a KS Number alone is never sufficient to create or reset its credential. |
+| **Current architectural decision** | Public recovery and forgotten-password controls are implemented with MFA abuse protections in Phase 16. |
+
+## Session and token security
+
+| Classification | Rule |
+| --- | --- |
+| **Locked doctrine** | Access and refresh tokens are opaque high-entropy values; only cryptographic digests are persisted. |
+| **Locked doctrine** | Refresh tokens rotate after successful use. |
+| **Locked doctrine** | Replay of a rotated refresh token revokes the compromised session and active descendants. |
+| **Locked doctrine** | Replay-triggered revocation must commit even when the request returns an invalid-session error. |
+| **Locked doctrine** | Password change revokes all sessions and refresh tokens belonging to the identity. |
+
+## Actor propagation
+
+| Classification | Rule |
+| --- | --- |
+| **Locked doctrine** | Authenticated actor identity is derived from a validated session, never from an untrusted actor header. |
+| **Current architectural decision** | The temporary SYSTEM actor must not represent ordinary user activity after authenticated actor propagation exists. |
+| **Current architectural decision** | Roles, scopes, organization membership and delegated authority are resolved dynamically rather than treated as permanently valid token claims. |
+
 ## Partner and API access
 
 | Classification | Statement |
@@ -66,3 +111,7 @@ KS Number → password → OTP → authenticated session
 - [KS Number Doctrine](KS_NUMBER_DOCTRINE.md)
 - [Security Baseline](../security/SECUREPAY_SECURITY_BASELINE.md)
 - [Unresolved Items Register](../operations/UNRESOLVED_ITEMS_REGISTER.md)
+- [MFA-Gated Session Activation ADR](../decisions/ADR-0016-MFA-GATED-SESSION-ACTIVATION.md)
+- [Authentication and Session Security Standard](../security/AUTHENTICATION_AND_SESSION_SECURITY_STANDARD.md)
+- [Identity Endpoint Exposure Standard](../architecture/IDENTITY_ENDPOINT_EXPOSURE_STANDARD.md)
+- [Phase 15 Authentication Implementation Contract](../architecture/PHASE_15_AUTHENTICATION_IMPLEMENTATION_CONTRACT.md)
